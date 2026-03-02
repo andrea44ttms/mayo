@@ -277,25 +277,29 @@ def cron_job():
         token = integration.get_access_token(installation.id).token
         gh = Github(token)
         
-        # Get all repos the bot has access to (via authenticated user)
-        repos = list(gh.get_user().get_repos())
-        print(f"DEBUG: Found {len(repos)} repos")
+        # Get all repos via REST API (App tokens can't use get_user().get_repos())
+        headers = {
+            'Authorization': f'token {token}',
+            'Accept': 'application/vnd.github.v3+json'
+        }
+        repos_response = requests.get('https://api.github.com/installation/repositories', headers=headers)
+        repos_data = repos_response.json()
+        repo_names = [r['full_name'] for r in repos_data.get('repositories', [])]
+        print(f"DEBUG: Found {len(repo_names)} repos: {repo_names}")
         
-        if not repos:
+        if not repo_names:
             return jsonify({'status': 'No repos found'}), 200
         
-        # Pick a random repo (skip forks/archived)
+        # Pick a random repo (skip forks/archived using REST data)
         import random
-        random.shuffle(repos)
-        target_repo = None
-        for r in repos:
-            if not r.fork and not r.archived:
-                target_repo = r
-                break
+        repo_list = [r for r in repos_data.get('repositories', []) if not r.get('fork') and not r.get('archived')]
         
-        if not target_repo:
+        if not repo_list:
             return jsonify({'status': 'All repos are forks/archived'}), 200
         
+        random.shuffle(repo_list)
+        chosen = repo_list[0]
+        target_repo = gh.get_repo(chosen['full_name'])
         print(f"DEBUG: Targeting repo: {target_repo.full_name}")
 
         # Analysis Phase
