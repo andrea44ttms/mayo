@@ -17,7 +17,7 @@ APP_ID = os.environ.get('APP_ID')
 PRIVATE_KEY = os.environ.get('PRIVATE_KEY', '').replace('\\n', '\n')
 WEBHOOK_SECRET = os.environ.get('WEBHOOK_SECRET')
 # GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent"
-GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
+GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
 
 # Helper: Verify Webhook Signature
 def verify_signature(req):
