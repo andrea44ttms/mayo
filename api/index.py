@@ -314,6 +314,16 @@ def cron_job():
         target_repo = gh.get_repo(chosen['full_name'])
         print(f"DEBUG: Targeting repo: {target_repo.full_name}")
 
+        # Fetch Global Memory from joe-gemini repo
+        try:
+            bot_repo = gh.get_repo("HOLYKEYZ/joe-gemini")
+            memory_file = bot_repo.get_contents("api/global_memory.md")
+            global_memory = memory_file.decoded_content.decode('utf-8')
+            print(f"DEBUG: Global memory fetched (len: {len(global_memory)})")
+        except Exception as e:
+            print(f"DEBUG: Failed to fetch global memory: {e}")
+            global_memory = "No global memory found. Start with fresh excellence."
+
         # Analysis Phase: Pick a random source file directly (skip Gemini file picker)
         structure = get_repo_structure(target_repo, max_depth=2)
         print(f"DEBUG: Repo structure fetched (len: {len(structure)})")
@@ -369,6 +379,7 @@ def cron_job():
                                               .replace('{{REPO_STRUCTURE}}', structure)\
                                               .replace('{{README_CONTENT}}', readme_content)\
                                               .replace('{{FILE_CONTENT}}', file_content)\
+                                              .replace('{{GLOBAL_MEMORY}}', global_memory)\
                                               .replace('{{TIMESTAMP}}', str(ts))
         except Exception as e:
             print(f"DEBUG: Failed to load external prompt: {e}. Falling back to internal.")
@@ -416,6 +427,29 @@ def cron_job():
                     print(f"DEBUG: Failed to assign/request review: {e}")
 
                 print(f"DEBUG: PR created: {pr.html_url}")
+                
+                # Update Global Memory with the new lesson
+                try:
+                    bot_repo = gh.get_repo("HOLYKEYZ/joe-gemini")
+                    old_memory_file = bot_repo.get_contents("api/global_memory.md")
+                    old_memory = old_memory_file.decoded_content.decode('utf-8')
+                    
+                    lesson = (
+                        f"\n- **Repo: {target_repo.full_name}**: {title}. (Ref: {pr.html_url})\n"
+                        f"  - *Impact: {improvement_data.get('body', 'Improved technical quality.')}*"
+                    )
+                    
+                    new_memory = old_memory + lesson
+                    bot_repo.update_file(
+                        "api/global_memory.md",
+                        f"feat(memory): record lesson from {target_repo.name}",
+                        new_memory,
+                        old_memory_file.sha
+                    )
+                    print("DEBUG: Global memory updated successfully.")
+                except Exception as e:
+                    print(f"DEBUG: Failed to update global memory: {e}")
+
                 return jsonify({'status': 'PR Created', 'url': pr.html_url}), 200
             else:
                 print("DEBUG: Commit failed")
