@@ -302,29 +302,42 @@ def cron_job():
         target_repo = gh.get_repo(chosen['full_name'])
         print(f"DEBUG: Targeting repo: {target_repo.full_name}")
 
-        # Analysis Phase
+        # Analysis Phase: Pick a random source file directly (skip Gemini file picker)
         structure = get_repo_structure(target_repo, max_depth=2)
-        readme = read_file_content(target_repo, "README.md") or ""
+        print(f"DEBUG: Repo structure:\n{structure[:500]}")
         
-        # Ask Gemini which file to improve
-        file_picker_prompt = f"""You are an autonomous maintainer for: {target_repo.full_name}
-Goal: Find ONE small, safe, high-value improvement.
-Codebase Structure:
-{structure}
-
-README:
-{readme[:2000]}
-
-Task: Pick a specific file to read to find a concrete improvement (refactor, doc fix, bug fix).
-Return only the file path in JSON: ["path/to/file.ext"]
-"""
-        initial_files = get_context_expansion_files("Find improvement", file_picker_prompt)
-        file_content = ""
-        target_path = ""
+        # Get actual files from root
+        try:
+            contents = target_repo.get_contents("")
+            source_files = []
+            for item in contents:
+                if item.type == 'file' and any(item.name.endswith(ext) for ext in ['.py', '.js', '.ts', '.go', '.md', '.jsx', '.tsx', '.java', '.rb', '.rs']):
+                    source_files.append(item.path)
+            # Also check common dirs
+            for dirname in ['src', 'api', 'lib', 'app', 'pages']:
+                try:
+                    dir_contents = target_repo.get_contents(dirname)
+                    for item in dir_contents:
+                        if item.type == 'file' and any(item.name.endswith(ext) for ext in ['.py', '.js', '.ts', '.go', '.jsx', '.tsx', '.java', '.rb', '.rs']):
+                            source_files.append(item.path)
+                except:
+                    pass
+            print(f"DEBUG: Found {len(source_files)} source files: {source_files[:10]}")
+        except Exception as e:
+            print(f"DEBUG: Error listing files: {e}")
+            source_files = []
         
-        if initial_files and len(initial_files) > 0:
-            target_path = initial_files[0]
-            file_content = read_file_content(target_repo, target_path)
+        if not source_files:
+            # Fallback to README
+            readme = read_file_content(target_repo, "README.md") or ""
+            if readme:
+                source_files = ["README.md"]
+            else:
+                print("DEBUG: No source files or README found")
+                return jsonify({'status': 'No source files found'}), 200
+        
+        target_path = random.choice(source_files)
+        file_content = read_file_content(target_repo, target_path)
         
         if not file_content:
             print(f"DEBUG: Could not read target file: {target_path}")
