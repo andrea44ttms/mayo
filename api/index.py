@@ -315,7 +315,7 @@ def query_gemini_reviewer(prompt, temperature=0.1):
 def audit_pending_reviews(gh):
     """Reviewer checks PENDING REVIEW entries in memory and updates with actual PR status."""
     try:
-        bot_repo = gh.get_repo("HOLYKEYZ/joe-gemini")
+        bot_repo = gh.get_repo(os.environ.get('BOT_REPO_NAME', 'HOLYKEYZ/mayo'))
         memory_file = bot_repo.get_contents("api/global_memory.md")
         memory = memory_file.decoded_content.decode('utf-8')
         
@@ -493,7 +493,7 @@ def cron_job():
         
         # Fetch Global Memory first for priority/cooldown analysis
         try:
-            bot_repo = gh.get_repo("HOLYKEYZ/joe-gemini")
+            bot_repo = gh.get_repo(os.environ.get('BOT_REPO_NAME', 'HOLYKEYZ/mayo'))
             memory_file_obj = bot_repo.get_contents("api/global_memory.md")
             global_memory = memory_file_obj.decoded_content.decode('utf-8')
             print(f"DEBUG: Global memory fetched (len: {len(global_memory)})")
@@ -718,7 +718,7 @@ def cron_job():
                 # Save rejection to memory
                 memory_note = reviewer_data.get('memory_note', f'Rejected edit on {target_repo.name}')
                 try:
-                    bot_repo = gh.get_repo("HOLYKEYZ/joe-gemini")
+                    bot_repo = gh.get_repo(os.environ.get('BOT_REPO_NAME', 'HOLYKEYZ/mayo'))
                     mem_file = bot_repo.get_contents("api/global_memory.md")
                     mem_content = mem_file.decoded_content.decode('utf-8')
                     mem_content += f"\n- **REJECTED by Reviewer**: {memory_note}"
@@ -783,7 +783,7 @@ def cron_job():
             
             # Save to memory
             try:
-                bot_repo = gh.get_repo("HOLYKEYZ/joe-gemini")
+                bot_repo = gh.get_repo(os.environ.get('BOT_REPO_NAME', 'HOLYKEYZ/mayo'))
                 old_memory_file = bot_repo.get_contents("api/global_memory.md")
                 old_memory = old_memory_file.decoded_content.decode('utf-8')
                 lesson = f"\n- **Repo: {target_repo.name}**: {final_title}. (Ref: {pr.html_url}) - *Status: PENDING REVIEW*"
