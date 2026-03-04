@@ -182,7 +182,7 @@ Do not explain. Just return the JSON.
 
 def extract_json_from_response(text):
     if not text: return None
-    json_patterns = [r'```json\s*([\s\S]*?)\s*```', r'```\s*([\s\S]*?)\s*```', r'\{[\s\S]*"files"[\s\S]*\}']
+    json_patterns = [r'```json\s*([\s\S]*?)\s*```', r'```\s*([\s\S]*?)\s*```', r'\{[\s\S]*"edits"[\s\S]*\}']
     for pattern in json_patterns:
         match = re.search(pattern, text)
         if match:
