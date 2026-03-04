@@ -1213,22 +1213,53 @@ Instructions:
         
         issue.create_comment(f"🛡️ **Reviewer (Mayo):**\n{plan}{memory_block}")
         
+        # Save Joseph's feedback to memory
+        try:
+            bot_repo = gh.get_repo(os.environ.get('BOT_REPO_NAME', 'HOLYKEYZ/mayo'))
+            mem_file = bot_repo.get_contents("api/global_memory.md")
+            old_mem = mem_file.decoded_content.decode('utf-8')
+            feedback_note = f"\n- **Joseph's Feedback on {repo.name}#{issue_number}**: \"{comment['body'][:120]}\" — Mayo acknowledged and responded."
+            bot_repo.update_file(
+                "api/global_memory.md",
+                f"feat(memory): save Joseph's feedback on {repo.name}#{issue_number}",
+                old_mem + feedback_note,
+                mem_file.sha
+            )
+        except Exception as e:
+            print(f"DEBUG: Failed to save feedback to memory: {e}")
+        
         # 6. Execute Code Changes (Executor)
         if "[REQUIRES_EXECUTION]" in plan:
             issue.create_comment("⚡ *Executor (Llama 3.3 70B) is now writing the code changes...*")
             
-            executor_prompt = f"""You are Mayo, the Executor AI (Code Engineer).
+            executor_prompt = f"""You are Mayo, the Executor AI (Surgical Code Engineer).
 The Reviewer AI has established this plan based on Joseph's feedback:
 {plan}
 
-Based on this plan, look at the files provided in the context below:
+Files in context:
 {expanded_context}
 
-Generate the exact surgical search/replace JSON edits needed to fulfill this fix.
-IMPORTANT RULES:
-1. MAX 10 lines per search block.
-2. Return strict JSON.
-3. Include the "file" field in each edit block so I know which file to modify!
+Generate surgical search/replace edits to fulfill this plan.
+
+HARD RULES:
+1. MAX 10 LINES per search block.
+2. EXACT MATCH: The "search" field must be an EXACT copy of the original code. Character-for-character.
+3. NO PLACEHOLDERS: Never use "...", "// rest of code", or "# code remains".
+4. NO MASS DELETIONS: If your replacement is significantly shorter than the search block, you are probably deleting code. Stop and reconsider.
+5. Include the "file" field in each edit block.
+
+OUTPUT FORMAT (Strict JSON, nothing else):
+{{
+  "title": "[TYPE] Brief technical title",
+  "body": "What was fixed and why.",
+  "edits": [
+    {{
+      "file": "path/to/file",
+      "search": "EXACT lines from original (max 10 lines)",
+      "replace": "Your improved replacement"
+    }}
+  ]
+}}
 """
             code_response = query_groq(executor_prompt)
             parsed = extract_json_from_response(code_response)
