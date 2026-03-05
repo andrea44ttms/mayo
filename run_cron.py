@@ -51,14 +51,31 @@ def run_cron():
             return
         
         # Fetch Global Memory first for priority/cooldown analysis
+        bot_repo_name = os.environ.get('BOT_REPO_NAME', 'HOLYKEYZ/mayo')
+        print(f"DEBUG: BOT_REPO_NAME = '{bot_repo_name}'")
         try:
-            bot_repo = gh.get_repo(os.environ.get('BOT_REPO_NAME', 'HOLYKEYZ/mayo'))
+            bot_repo = gh.get_repo(bot_repo_name)
+            print(f"DEBUG: Successfully accessed bot repo: {bot_repo.full_name}")
             memory_file_obj = bot_repo.get_contents("api/global_memory.md")
             global_memory = memory_file_obj.decoded_content.decode('utf-8')
             print(f"DEBUG: Global memory fetched (len: {len(global_memory)})")
         except Exception as e:
-            print(f"DEBUG: Failed to fetch global memory: {e}")
-            global_memory = "No global memory found. Start with fresh excellence."
+            print(f"DEBUG: PyGithub failed to fetch global memory: {e}")
+            # Fallback: try direct REST API
+            try:
+                mem_url = f"https://api.github.com/repos/{bot_repo_name}/contents/api/global_memory.md"
+                mem_resp = requests.get(mem_url, headers=headers)
+                print(f"DEBUG: REST API fallback status: {mem_resp.status_code}")
+                if mem_resp.status_code == 200:
+                    import base64
+                    global_memory = base64.b64decode(mem_resp.json()['content']).decode('utf-8')
+                    print(f"DEBUG: Global memory fetched via REST (len: {len(global_memory)})")
+                else:
+                    print(f"DEBUG: REST fallback also failed: {mem_resp.text[:200]}")
+                    global_memory = "No global memory found. Start with fresh excellence."
+            except Exception as e2:
+                print(f"DEBUG: REST fallback exception: {e2}")
+                global_memory = "No global memory found. Start with fresh excellence."
 
         # === REPO SELECTION: Exclusions, Cooldown, Priority ===
         EXCLUDED_REPOS = ['Square-farms', 'Jo-ayanda-real-estate', 'Backend-images-app', 'ecom-stor']
