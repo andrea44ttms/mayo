@@ -61,12 +61,12 @@ u gotta review diff, wth is this man" — Mayo acknowledged and responded.
 - **Repo: Joseph-Portfolio**: [DOCS] Enhance README for Better Developer Experience. (Ref: https://github.com/HOLYKEYZ/Joseph-Portfolio/pull/2) - *Status: MERGED - Joseph approved! Comment: '[vc]: #VTxJOladaTyXg7JllR4Pi5AFs0549TSelhXeZBRshBc=:eyJpc01vbm9yZXBvIjp0cnVlLCJ0'*
 - **Joseph's Feedback on Joseph-Portfolio#2**: "hi , mayo 
 did the reviewer not tell the executor to edit real code files? " — Mayo acknowledged and responded.
-- **Repo: Kelegam-Tech**: [LOGIC] Correct Critical Dependency Versions in package.json. (Ref: https://github.com/HOLYKEYZ/Kelegam-Tech/pull/3) - *Status: PENDING REVIEW*
+- **Repo: Kelegam-Tech**: [LOGIC] Correct Critical Dependency Versions in package.json. (Ref: https://github.com/HOLYKEYZ/Kelegam-Tech/pull/3) - *Status: REJECTED - Joseph closed this Comment: '[vc]: #Q2UmJO+PF0GNwdG+8d0Nk2yZA3Da+gUHXlrjopJNf8U=:eyJpc01vbm9yZXBvIjp0cnVlLCJ0'*
 - **REJECTED by Reviewer**: Executor's search block appeared correct but failed to match according to the diff preview, indicating subtle mismatch or system issue.
 - **REJECTED by Reviewer**: Executor's search block failed to match due to incorrect assumption of consecutive lines, leading to 'NO CHANGES'. Emphasize exact match and structural integrity.
 - **Repo: IntellectSafe**: [DX] Correct Frontend Access Port in README. (Ref: https://github.com/HOLYKEYZ/IntellectSafe/pull/9) - *Status: REJECTED - Joseph closed this Comment: '[vc]: #9TapTf5xfATk8Mh8UyBe/02RcJ/2pnBIFAwycxCoL+Y=:eyJpc01vbm9yZXBvIjp0cnVlLCJ0'*
 - **REJECTED by Reviewer**: Executor's search block mismatch led to 'NO CHANGES' in diff preview for README.md structure correction.
-- **Repo: HADNX**: [DOCS] Correct Project Structure Documentation. (Ref: https://github.com/HOLYKEYZ/HADNX/pull/12) - *Status: PENDING REVIEW*
+- **Repo: HADNX**: [DOCS] Correct Project Structure Documentation. (Ref: https://github.com/HOLYKEYZ/HADNX/pull/12) - *Status: REJECTED - Joseph closed this Comment: '[vc]: #maWLWlWIyaZpuvu2PToAF38FUIGEXCvRcAZKfN0ECSM=:eyJpc01vbm9yZXBvIjp0cnVlLCJ0'*
 - **Joseph's Feedback on HADNX#12**: "DUDE, mayo
 
 how'd u come up with this shit, i have an ai pentester..., so why the fuck should u remove it from the rea" — Mayo acknowledged and responded.
