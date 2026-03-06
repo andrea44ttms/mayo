@@ -963,21 +963,32 @@ Instructions:
         if "[REQUIRES_EXECUTION]" in plan:
             issue.create_comment("⚡ *Executor (Llama 3.3 70B) is now writing the code changes...*")
             
+            # Re-read the exact file contents for the Executor (with clear delimiters)
+            exact_files_context = ""
+            files_for_executor = new_files_read if new_files_read else files_already_read[:5]
+            for fp in files_for_executor:
+                fc = read_file_content(repo, fp)
+                if fc:
+                    exact_files_context += f"\n--- START OF FILE: {fp} ---\n{fc}\n--- END OF FILE: {fp} ---\n"
+            
             executor_prompt = f"""You are Mayo, the Executor AI (Surgical Code Engineer).
 The Reviewer AI has established this plan based on Joseph's feedback:
 {plan}
 
-Files in context:
-{expanded_context}
+Repository: {repo.full_name}
+Available files: {', '.join(files_for_executor)}
+
+{exact_files_context}
 
 Generate surgical search/replace edits to fulfill this plan.
 
 HARD RULES:
 1. FULL CONTEXT EDITS: You are fully authorized to replace entire functions, large sections of code, or update multiple files across the repository.
-2. EXACT MATCH: The "search" field must be an EXACT copy of the original code. Character-for-character.
+2. EXACT MATCH: The "search" field must be an EXACT copy of the original code from the file contents above. Character-for-character, including indentation.
 3. NO PLACEHOLDERS: Never use "...", "// rest of code", or "# code remains".
-4. NO UNINTENDED DELETIONS: Ensure you are not accidentally deleting important surrounding context. Review your edits carefully.
+4. NO UNINTENDED DELETIONS: Ensure you are not accidentally deleting important surrounding context.
 5. PRESERVE EVERYTHING: Indentation, comments, blank lines outside your edit MUST remain untouched.
+6. COPY DIRECTLY: Copy the search text DIRECTLY from the file contents shown above. Do NOT retype from memory.
 
 OUTPUT FORMAT (Strict JSON, nothing else):
 {{
