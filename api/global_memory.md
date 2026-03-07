@@ -60,3 +60,4 @@ how'd u come up with this shit, i have an ai pentester..., so why the fuck shoul
 - **Repo: temple-sysinfo**: [DX] Update Compile Command in sysinfo.c. (Ref: https://github.com/HOLYKEYZ/temple-sysinfo/pull/3) - *Status: PENDING REVIEW*
 - **Repo: Alexcathe**: [DX] Update Misleading Comment in Tailwind Config. (Ref: https://github.com/HOLYKEYZ/Alexcathe/pull/4) - *Status: PENDING REVIEW*
 - **REJECTED by Reviewer**: Executor's search block for README.md badge failed to match due to HTML vs. Markdown syntax mismatch, resulting in 'NO CHANGES'.
+- **Repo: Joseph-Portfolio**: [DOCS] Update Contact Information in README. (Ref: https://github.com/HOLYKEYZ/Joseph-Portfolio/pull/3) - *Status: PENDING REVIEW*
