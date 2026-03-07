@@ -267,6 +267,64 @@ def apply_surgical_edits(content, edits):
                     print(f"DEBUG: Fuzzy-matched search block at line {i+1} (whitespace-tolerant)")
                     break
         
+        # Pass 3: Markdown-normalized match — handles code fences, heading variations, collapsed whitespace
+        if match_start == -1:
+            import re as re_match
+            
+            def normalize_md(line):
+                """Normalize a line for markdown-tolerant matching."""
+                s = line.strip()
+                # Normalize code fences: ```bash, ```python, etc → ```
+                s = re_match.sub(r'^```\w*', '```', s)
+                # Collapse multiple spaces/tabs into single space
+                s = re_match.sub(r'\s+', ' ', s)
+                # Normalize markdown headings: ##  Title → ## Title
+                s = re_match.sub(r'^(#{1,6})\s+', r'\1 ', s)
+                return s.lower()
+            
+            # Skip search lines that are LLM truncation artifacts (# ..., // ..., etc.)
+            clean_search_indices = []
+            for idx, sl in enumerate(search_lines):
+                stripped = sl.strip()
+                if stripped in ('# ...', '// ...', '...', '# ...', '/* ... */', '// rest of code'):
+                    continue
+                clean_search_indices.append(idx)
+            
+            if len(clean_search_indices) >= 2:  # Need at least 2 real lines to match
+                for i in range(len(content_lines) - len(clean_search_indices) + 1):
+                    matched = True
+                    offset = 0
+                    for ci_idx, search_idx in enumerate(clean_search_indices):
+                        # Find the next matching content line starting from current position
+                        found = False
+                        search_norm = normalize_md(search_lines[search_idx])
+                        if not search_norm:
+                            continue
+                        while i + offset + ci_idx < len(content_lines):
+                            content_norm = normalize_md(content_lines[i + offset + ci_idx].rstrip('\r\n'))
+                            if content_norm == search_norm:
+                                found = True
+                                break
+                            elif ci_idx == 0:
+                                # First line must match at current position
+                                break
+                            else:
+                                offset += 1
+                                if offset > 3:  # Don't skip more than 3 lines
+                                    break
+                        if not found:
+                            matched = False
+                            break
+                    if matched:
+                        # Calculate the full match range from first to last matched line
+                        first_search = clean_search_indices[0]
+                        last_search = clean_search_indices[-1]
+                        match_start = i
+                        # Recalculate search_lines to cover the full range in the file
+                        search_lines = search_lines  # Keep original for replacement calculation
+                        print(f"DEBUG: Markdown-normalized match at line {i+1} (code fence / heading tolerant)")
+                        break
+        
         if match_start == -1:
             print(f"DEBUG: Search block not found (line-match): {search[:50]}...")
             continue
