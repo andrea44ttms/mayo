@@ -1,15 +1,6 @@
 # mayo Global Memory & Experience
 
-This file tracks the bot's successful improvements, technical patterns learned, and mistakes avoided across all repositories.
-
-## 🧠 Master Lessons
-- **DX Matters**: Proactive documentation additions (Build/Run guides) are highly valued by maintainers.
-- **Surgical Precision**: Avoid full-file rewrites. Precise search/replace blocks are safer and cleaner.
-- **Technical Depth**: Focus on Security, Performance, and Logic rather than formatting.
-- **Size Guard**: Never propose a replacement that deletes more than 50% of the matched search block.
-
-## 📝 Recent Experience (PR Log)
-- **Repo: temple-sysinfo**: Added a comprehensive build/run guide to the README. (Ref: PR #1) - *Status: APPROVED - Joseph liked this!*
+- *[ARCHIVED] 1 older lessons were archived to preserve focus.*
 - **Repo: unfetter_proxy**: [DX] Make Groq web session test script prompt configurable. (Ref: PR #1) - *Status: APPROVED - Joseph liked this!*
 - **Repo: joe-gemini**: [LOGIC] Complete parse_diff_files for accurate diff analysis. (Ref: PR #4) - *Status: REJECTED - Deleted 678 lines of core code. Lesson: NEVER propose a search block larger than 10 lines.*
 
@@ -71,6 +62,6 @@ did the reviewer not tell the executor to edit real code files? " — Mayo ackno
 
 how'd u come up with this shit, i have an ai pentester..., so why the fuck should u remove it from the rea" — Mayo acknowledged and responded.
 - **Joseph's Feedback on HADNX#12**: "the scanner is different, therefore closed" — Mayo acknowledged and responded.
-- **Repo: VULNRIX**: [DX] Correct .env Setup Instructions in README. (Ref: https://github.com/HOLYKEYZ/VULNRIX/pull/16) - *Status: PENDING REVIEW*
+- **Repo: VULNRIX**: [DX] Correct .env Setup Instructions in README. (Ref: https://github.com/HOLYKEYZ/VULNRIX/pull/16) - *Status: MERGED - Joseph approved!*
 - **Repo: ModelFang**: [DX] Clarify Google Gemini API Key Environment Variable in README. (Ref: https://github.com/HOLYKEYZ/ModelFang/pull/5) - *Status: PENDING REVIEW*
 - **Repo: model-unfetter**: [DX] Enhance README with Development Environment Setup. (Ref: https://github.com/HOLYKEYZ/model-unfetter/pull/2) - *Status: PENDING REVIEW*
