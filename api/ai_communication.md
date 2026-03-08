@@ -1947,3 +1947,134 @@ Full autonomy is granted to perform these two targeted text replacements within 
 **Reviewer**: Reviewer response unparseable
 
 ---
+
+## Cycle 1773008855
+**Scanner**: ## SCANNER ANALYSIS: HOLYKEYZ/git-pulse
+
+### Step 1: Codebase Understanding
+
+This repository, GitPulse, aims to be a social layer for GitHub, presenting a Twitter-like feed format. It is structured as a monorepo using pnpm workspaces, separating concerns into a Next.js 15 frontend (`apps/web`), an Express.js backend API (`apps/api`), a shared UI component library (`packages/ui`), and a database layer (`packages/db`, though not fully provided in the target files).
+
+**File Under Analysis Roles:**
+
+*   **`apps/api/package.json`**: Defines the API service's dependencies, devDependencies, and scripts for development, building, and starting the Express server.
+*   **`tsconfig.json` (root)**: The base TypeScript configuration for the entire monorepo, primarily for type checking and ensuring consistent language features.
+*   **`packages/ui/src/lib/utils.ts`**: Contains utility functions for the shared UI package, specifically a `cn` helper for merging Tailwind CSS classes using `clsx` and `tailwind-merge`.
+*   **`apps/web/src/app/api/auth/[...nextauth]/route.ts`**: Exposes the NextAuth v5 handlers for authentication routes in the Next.js frontend.
+*   **`apps/web/src/app/page.tsx`**: The main landing page component for the Next.js frontend, currently displaying placeholder UI for a "compose" area and an empty feed.
+*   **`apps/api/src/index.ts`**: The entry point for the Express.js backend API, setting up the server, defining a port, and including a placeholder `/api/feed/:userId` endpoint.
+*   **`apps/web/src/components/ContributionHeatmap.tsx`**: A React component that renders a dummy GitHub-style contribution heatmap for the Next.js frontend.
+*   **`apps/web/package.json`**: Defines the Next.js frontend's dependencies, devDependencies, and scripts for development, building, and linting.
+*   **`apps/web/src/app/layout.tsx`**: The root layout component for the Next.js frontend, establishing the overall page structure, metadata, and a 3-column layout shell with navigation and sidebars.
+*   **`apps/web/src/middleware.ts`**: The Next.js middleware responsible for handling authentication redirects, ensuring users are logged in to access protected routes and preventing logged-in users from accessing the login page.
+
+**Patterns, Frameworks, and Conventions:**
+
+*   **Monorepo**: Managed with `pnpm` workspaces.
+*   **Frontend**: Next.js 15 App Router, React 19, Tailwind CSS for styling, Auth.js (NextAuth v5) for authentication.
+*   **Backend**: Express.js with TypeScript.
+*   **Styling**: Tailwind CSS with a custom GitHub Dark Mode-inspired design system.
+*   **Utilities**: `clsx` and `tailwind-merge` for dynamic class concatenation.
+*   **Authentication**: NextAuth v5 for OAuth (GitHub).
+*   **TypeScript**: Used consistently across `apps/api`, `apps/web`, and `packages/ui`.
+
+### Step 2: Deep Analysis
+
+**Security:**
+*   **`apps/api/src/index.ts`**: The `/api/feed/:userId` endpoint is currently unprotected. The comment explicitly states, "Your middleware here should verify the session to ensure the user is logged in," but no such verification is implemented. This allows unauthenticated access to a user-specific endpoint, which is a critical security vulnerability. Once actual feed logic is implemented, this could lead to unauthorized data access. Furthermore, there's no check to ensure the `userId` in the path matches the authenticated user, potentially allowing one authenticated user to fetch another's feed.
+
+**Logic:**
+*   **`apps/api/src/index.ts`**: The feed logic is explicitly marked as `TODO`, indicating missing core functionality. The current response is a static placeholder.
+*   **`apps/web/src/app/page.tsx`**: The "Compose Component Placeholder" has a redundant `p-4 p-4` class in its div, which is a minor styling inconsistency but not a functional bug.
+
+**Performance:**
+*   No immediate performance bottlenecks are evident in the provided static/placeholder code. The `ContributionHeatmap` generates random data client-side, which is fine for a dummy component.
+
+**Architecture:**
+*   **`apps/api/src/index.ts`**: The API currently lacks a robust authentication and authorization layer, which is a fundamental architectural component for any user-facing API. The current setup is a placeholder, but the lack of security for a user-specific endpoint is a significant gap.
+*   The `packages/db` mentioned in the README is not present in the target files, implying the API currently has no database integration, which is expected given its "pending implementation" status.
+
+**Features:**
+*   **`apps/api/src/index.ts`**: The core "Feed scoring logic" is missing, as indicated by the `TODO` comment.
+*   **`apps/web/src/app/page.tsx`**: The "Compose Component" and "Feed Placeholder" represent missing interactive features.
+*   **`apps/web/src/app/layout.tsx`**: "Trending Repos Box" and "Who to Ship With Box" are placeholders for future features.
+
+**Testing:**
+*   No test files are provided in the analysis scope, so it's impossible to assess testing coverage or patterns. However, the lack of authentication in the API suggests a missing test case for unauthorized access.
+
+**DX (Developer Experience):**
+*   The README provides clear setup instructions, which is good DX.
+*   The explicit `TODO` comments are helpful for developers.
+*   The `p-4 p-4` redundancy is a minor DX issue, as it's a small typo.
+
+**Consistency:**
+*   **`apps/web/src/app/page.tsx`**: The `p-4 p-4` class is a minor inconsistency.
+
+**Dead Code:**
+*   No dead code is immediately apparent in the provided files, as most of the code serves as placeholders or foundational setup.
+
+### Step 3: Pick ONE Improvement
+
+The most valuable improvement is to address the **critical security vulnerability** in the `apps/api/src/index.ts` file. The `/api/feed/:userId` endpoint is designed to be user-specific but lacks any authentication or authorization, allowing unauthenticated access. This is a fundamental flaw that must be rectified before any actual feed logic is implemented, as it directly impacts the integrity and privacy of user data.
+
+### Step 4: Write the Executor's Plan
+
+**WHAT** to change:
+Implement a robust authentication and authorization middleware in the Express API to protect the `/api/feed/:userId` endpoint. This will ensure that only authenticated users can access their respective feeds, and crucially, that a user can only access *their own* feed, preventing unauthorized access to other users' data.
+
+**WHERE** in the file(s):
+The primary changes will occur in `apps/api/src/index.ts`. Additionally, `apps/api/package.json` will need updates for new dependencies, and the root `.env.example` file will require a new entry for a secret key.
+
+**WHY** this matters:
+The current `/api/feed/:userId` endpoint is publicly accessible, allowing any client to request a feed for any user ID without authentication. This is a critical security vulnerability. Once the "Feed scoring logic" is implemented, this flaw would expose user-specific data to anyone, violating data privacy and security principles. The existing comment in `apps/api/src/index.ts` explicitly highlights the need for session verification, indicating this is a known but unimplemented security requirement. Implementing this now establishes a secure foundation for future API development.
+
+**HOW** to do it:
+1.  Modify the `apps/api/package.json` file to include a new dependency for JSON Web Token (JWT) handling, such as `jsonwebtoken`, and its corresponding TypeScript type definition in `devDependencies` (e.g., `@types/jsonwebtoken`).
+2.  In `apps/api/src/index.ts`, introduce a new authentication middleware function. This middleware should be responsible for:
+    *   Extracting an authentication token (expected to be a JWT) from the `Authorization` header of incoming requests.
+    *   Verifying the token's authenticity and integrity using a secret key, which will be loaded from environment variables.
+    *   If the token is valid, decoding its payload to extract user information (such as a user ID) and attaching this information to the request object (e.g., `req.user`) for subsequent handlers.
+    *   If the token is missing, invalid, or expired, sending an appropriate error response (e.g., HTTP 401 Unauthorized) and preventing the request from proceeding to the route handler.
+3.  Apply this newly created authentication middleware specifically to the `/api/feed/:userId` route, ensuring it executes before the existing route handler.
+4.  Within the `/api/feed/:userId` route handler, modify the logic to access the authenticated user's ID from the request object (which was populated by the middleware). Add a crucial check to compare this authenticated user ID with the `userId` parameter extracted from the URL (`req.params.userId`). If these two IDs do not match, return an HTTP 403 Forbidden error to prevent users from accessing other users' feeds.
+5.  Update the root `.env.example` file to include a placeholder for the JWT secret key (e.g., `JWT_SECRET`) that the API will use for token signing and verification. This will guide developers to configure this critical environment variable in their local `.env.local` file.
+
+**SCOPE**:
+This improvement involves modifications to `apps/api/package.json`, `apps/api/src/index.ts`, and the root `.env.example` file.
+
+**Executor**: ```json
+{
+  "title": "[SEC] Protect /api/feed/:userId with Authentication Middleware",
+  "body": "### Problem / Gap\nThe `/api/feed/:userId` endpoint in `apps/api/src/index.ts` lacks authentication, allowing unauthorized access to user-specific data.\n\n### Solution & Insight\nTo address this critical security vulnerability, we introduce an authentication middleware using JSON Web Tokens (JWT). This middleware verifies the authenticity of incoming requests by checking for a valid JWT in the `Authorization` header. If the token is valid, it extracts the user's ID and checks if it matches the `userId` parameter in the URL, preventing users from accessing other users' feeds.\n\n### Impact\nThis change significantly enhances the security of the GitPulse API by ensuring that only authenticated users can access their respective feeds, thus protecting user data privacy.",
+  "branch_name": "bot/secure-feed-endpoint",
+  "edits": [
+    {
+      "file": "apps/api/package.json",
+      "search": "    \"dependencies\": {\n        \"express\": \"^4.21.0\"\n    },",
+      "replace": "    \"dependencies\": {\n        \"express\": \"^4.21.0\",\n        \"jsonwebtoken\": \"^9.0.0\"\n    },"
+    },
+    {
+      "file": "apps/api/package.json",
+      "search": "    \"devDependencies\": {\n        \"@types/express\": \"^4.17.21\",\n        \"@types/node\": \"^20\",\n        \"nodemon\": \"^3.1.0\",\n        \"ts-node\": \"^10.9.2\",\n        \"typescript\": \"^5\"\n    }",
+      "replace": "    \"devDependencies\": {\n        \"@types/express\": \"^4.17.21\",\n        \"@types/node\": \"^20\",\n        \"nodemon\": \"^3.1.0\",\n        \"ts-node\": \"^10.9.2\",\n        \"typescript\": \"^5\",\n        \"@types/jsonwebtoken\": \"^9.0.0\"\n    }"
+    },
+    {
+      "file": "apps/api/src/index.ts",
+      "search": "import express from 'express';\n\nconst app = express();\nconst port = process.env.PORT || 4000;\n\napp.use(express.json());\n\n// Example: How to extract the user's GitHub session\n// The frontend Next.js app passes the NextAuth session token (or JWT)\n// Your middleware here should verify the session to ensure the user is logged in\napp.get('/api/feed/:userId', (req, res) => {\n    // TODO: Feed scoring logic goes here (Dave)\n    res.json({ message: \"Algo feed placeholder\" });\n});",
+      "replace": "import express from 'express';\nimport jwt from 'jsonwebtoken';\n\nconst app = express();\nconst port = process.env.PORT || 4000;\nconst secretKey = process.env.JWT_SECRET;\n\napp.use(express.json());\n\nconst authenticate = (req, res, next) => {\n    const token = req.header('Authorization');\n    if (!token) return res.status(401).json({ message: 'Access denied. No token provided.' });\n    try {\n        const decoded = jwt.verify(token, secretKey);\n        req.user = decoded;\n        next();\n    } catch (ex) {\n        return res.status(400).json({ message: 'Invalid token.' });\n    }\n};\n\napp.get('/api/feed/:userId', authenticate, (req, res) => {\n    if (req.user.userId !== req.params.userId) return res.status(403).json({ message: 'Forbidden. You can only access your own feed.' });\n    // TODO: Feed scoring logic goes here (Dave)\n    res.json({ message: \"Algo feed placeholder\" });\n});"
+    }
+  ]
+}
+```
+
+**Reviewer**: REJECTED x2: The first two edits for `apps/api/package.json` are correct and align with the plan. However, the third edit for `apps/api/src/index.ts` is problematic. Your search block for `apps/api/src/index.ts` is 13 lines long, and your replacement block is 25 lines long. By replacing the entire search block, you are effectively deleting 100% of its lines, which violates the 'Does any single edit delete more than 50% of the search block's lines?' rule.
+
+To fix this, you need to split this change into multiple, smaller, and less destructive edits. Each edit should aim to modify only a small, focused part of the code. For example:
+
+1.  **Add new imports and `secretKey` declaration:** Create an edit to insert `import jwt from 'jsonwebtoken';` and `const secretKey = process.env.JWT_SECRET;` at the appropriate location (e.g., after `import express`).
+2.  **Insert `authenticate` middleware:** Create a separate edit to insert the entire `authenticate` middleware function *before* the `app.get('/api/feed/:userId', ...)` route.
+3.  **Modify the `app.get` route:** Create a final edit to update the existing `app.get` route, adding the `authenticate` middleware and the authorization check (`if (req.user.userId !== req.params.userId) ...`), while carefully preserving the existing `// TODO` comment and `res.json` line.
+
+This approach ensures that each change is incremental, easier to verify, and adheres to the review guidelines. Please resubmit with these changes split into distinct, less destructive edits.
+
+---
