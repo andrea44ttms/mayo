@@ -71,3 +71,4 @@ how'd u come up with this shit, i have an ai pentester..., so why the fuck shoul
 
 u're working on a fix, mayo?" — Mayo acknowledged and responded.
 - **REJECTED by Reviewer**: Executor's search block for `apps/web/src/lib/auth.ts` failed to match due to missing trailing comma and newline, resulting in 'NO CHANGES'. Emphasize exact match including all characters and whitespace.
+- **REJECTED by Reviewer**: Executor's search block for `apps/web/src/lib/auth.ts` failed to match due to missing trailing comma after a function call, resulting in 'NO CHANGES'. Emphasize exact match.
