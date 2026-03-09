@@ -222,10 +222,16 @@ def run_cron():
         if should_run_timed_phase(current_memory, 'LAST_PR_JUDGE', 6):
             print("DEBUG: Phase 0.6 — Judging open PRs (6h cycle)")
             try:
-                repos_for_judge = [gh.get_repo(r['full_name']) for r in repos_data.get('repositories', [])[:10] if not r.get('fork')]
+                import random
+                all_repos = [r for r in repos_data.get('repositories', []) if not r.get('fork')]
+                random.shuffle(all_repos)
+                repos_for_judge = [gh.get_repo(r['full_name']) for r in all_repos[:2]]  # Only 2 repos to save tokens
+                pr_action_taken = False
                 for judge_repo in repos_for_judge:
                     try:
-                        open_prs = list(judge_repo.get_pulls(state='open'))[:3]
+                        if pr_action_taken:
+                            break
+                        open_prs = list(judge_repo.get_pulls(state='open'))[:2]  # Max 2 PRs per repo
                         for pr in open_prs:
                             if pr.user.login == get_bot_login():
                                 continue  # Skip our own PRs
@@ -261,6 +267,7 @@ Output ONLY JSON: {{"reasonableness_score": 85, "action": "merge|close|skip", "r
                                         pr.edit(state='closed')
                                         pr.create_issue_comment(f"❌ Closed by Mayo — not reasonable (score: {score}/100)\n\n{reason}")
                                         print(f"DEBUG: Auto-closed PR #{pr.number} on {judge_repo.name} (score: {score})")
+                                        pr_action_taken = True
                     except Exception as e:
                         print(f"DEBUG: Error judging PRs on {judge_repo.name}: {e}")
                 
@@ -274,10 +281,16 @@ Output ONLY JSON: {{"reasonableness_score": 85, "action": "merge|close|skip", "r
         if should_run_timed_phase(current_memory, 'LAST_ISSUE_JUDGE', 6):
             print("DEBUG: Phase 0.7 — Judging open issues (6h cycle)")
             try:
-                repos_for_issues = [gh.get_repo(r['full_name']) for r in repos_data.get('repositories', [])[:10] if not r.get('fork')]
+                import random
+                all_repos_i = [r for r in repos_data.get('repositories', []) if not r.get('fork')]
+                random.shuffle(all_repos_i)
+                repos_for_issues = [gh.get_repo(r['full_name']) for r in all_repos_i[:2]]  # Only 2 repos
+                issue_action_taken = False
                 for issue_repo in repos_for_issues:
                     try:
-                        open_issues = [i for i in issue_repo.get_issues(state='open') if not i.pull_request][:3]
+                        if issue_action_taken:
+                            break
+                        open_issues = [i for i in issue_repo.get_issues(state='open') if not i.pull_request][:2]  # Max 2 issues
                         for issue in open_issues:
                             judge_prompt = f"""You are Mayo, the Reviewer AI. Judge this issue.
 
@@ -304,7 +317,7 @@ Output ONLY JSON: {{"reasonableness_score": 70, "action": "fix|close|skip", "rea
                                     elif action == 'fix' and score >= 70:
                                         issue.create_comment(f"🔧 Mayo is working on a fix for this... (score: {score}/100)")
                                         print(f"DEBUG: Issue #{issue.number} on {issue_repo.name} queued for auto-fix (score: {score})")
-                                        # The actual fix will be picked up by the normal PR pipeline
+                                        issue_action_taken = True
                     except Exception as e:
                         print(f"DEBUG: Error judging issues on {issue_repo.name}: {e}")
                 
@@ -395,7 +408,7 @@ If the repo looks fine, output: SKIP"""
                     return r.json()
                 
                 # Check each repo for unanswered discussions
-                for repo_data in repos_data.get('repositories', [])[:10]:
+                for repo_data in repos_data.get('repositories', [])[:3]:  # Only 3 repos to save tokens
                     owner, name = repo_data['full_name'].split('/')
                     try:
                         result = graphql_query(token, """
