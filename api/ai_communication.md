@@ -2088,3 +2088,87 @@ Using `@ts-ignore` is a temporary fix that bypasses TypeScript's type checking, 
 Please ensure that the `next-auth.d.ts` file is correctly created with the specified content. If the `search: ""` syntax is not working for file creation, you may need to adjust your approach to ensure this new file is properly introduced into the codebase. Once the type definition file is confirmed to be created, the removal of `@ts-ignore` will be valid.
 
 ---
+
+## Cycle 1773085414
+**Scanner**: ## Codebase Understanding
+
+This repository, `HOLYKEYZ/git-pulse`, is a monorepo designed to be a "GitHub's Social Layer" with a Twitter-like feed format. It consists of a Next.js 15 frontend (`apps/web`), an Express.js backend (`apps/api`), and shared packages for database (`packages/db`) and UI components (`packages/ui`).
+
+The files under analysis are primarily part of the `apps/web` Next.js application. They define the frontend's styling configuration (`tailwind.config.ts`), core UI components (`ContributionHeatmap.tsx`, `RepoCard.tsx`), Next.js configuration (`next.config.ts`), authentication logic (`auth.ts`), and specific pages (`login/page.tsx`, `profile/[username]/page.tsx`). The root `package.json` and `pnpm-workspace.yaml` define the monorepo structure and scripts.
+
+The codebase uses Next.js 15 with the App Router, Tailwind CSS for styling (with a GitHub Dark Mode design system), and Auth.js (NextAuth v5) for authentication. It follows a component-based architecture typical of React applications.
+
+## Deep Analysis
+
+### Security
+- **GitHub OAuth Scope**: In `apps/web/src/lib/auth.ts`, the GitHub OAuth provider requests the `public_repo` scope. This scope grants read/write access to public repositories. However, the `apps/web/src/app/login/page.tsx` explicitly states: "By signing in, you agree that GitPulse will request read-only access to your public repositories." This is a direct contradiction, as `public_repo` is not read-only. This discrepancy is a significant security and privacy concern, as users are granting more permissions than they are informed about. Adhering to the principle of least privilege, the application should only request the necessary permissions. For merely displaying public repository information, the `read:user` scope is generally sufficient, as public repository data is often accessible without specific `repo` scopes, or `read:user` provides enough context for profile-linked public repos.
+
+### Logic
+- **Mock Data Usage**: `apps/web/src/app/profile/[username]/page.tsx` and `apps/web/src/components/ContributionHeatmap.tsx` heavily rely on mock data. While this is noted as a temporary measure ("Note: we'll fetch real user data from our DB / GitHub API later"), it means the current UI is not connected to live data, and the logic for fetching and displaying real data is yet to be implemented.
+- **`isOwnProfile` Logic**: In `apps/web/src/app/profile/[username]/page.tsx`, the `isOwnProfile` check `session?.user?.name === username || (!session?.user?.name && username === 'me')` correctly handles both authenticated users viewing their own profile and unauthenticated users viewing a placeholder 'me' profile.
+
+### Performance
+- **No obvious performance bottlenecks** are visible in the current code, primarily due to the extensive use of mock data. Real performance concerns would arise once actual API calls and data fetching are implemented.
+
+### Architecture
+- **Type Safety for Session**: In `apps/web/src/lib/auth.ts`, the `session` callback uses `@ts-ignore` to add `accessToken` and `githubId` to `session.user`. This indicates a missing type declaration to extend the `Session` and `User` interfaces from `next-auth`, which is a common pattern for custom session data. This reduces type safety and developer experience.
+- **Missing API Implementation**: The `README.md` explicitly states the `apps/api` is "pending implementation in Week 1". This means the backend logic for data persistence and complex operations is not yet in place.
+- **Error Handling**: Basic error handling for authentication is present (redirect to login), but more granular error handling for data fetching (once implemented) is not yet visible.
+
+### Features
+- **Real Data Fetching**: The most significant missing feature is the integration with real user and repository data from GitHub API and a database, as explicitly mentioned in `profile/[username]/page.tsx`.
+- **API Backend**: The `apps/api` is a placeholder, meaning core backend functionality is missing.
+
+### Testing
+- **No Test Files**: No test files are included in the provided analysis, suggesting a lack of automated testing.
+
+### DX (Developer Experience)
+- **Tailwind Color Consistency**: `apps/web/src/components/ContributionHeatmap.tsx` uses hardcoded hexadecimal color values (e.g., `bg-[#161b22]`) for the heatmap cells. However, `apps/web/tailwind.config.ts` already defines a `git` color palette with named colors (e.g., `git-card`, `git-green`). Using the defined Tailwind classes would improve consistency, maintainability, and readability.
+
+### Consistency
+- **Import Patterns**: Consistent use of `@/` alias for internal imports (`@/lib/auth`, `@/components/ContributionHeatmap`).
+- **Tailwind Class Usage**: As noted above, the `ContributionHeatmap` component deviates from the defined Tailwind color palette.
+
+### Dead Code
+- **No obvious dead code** in the provided files.
+
+## Improvement Plan
+
+From the analysis, the most critical issue is the discrepancy between the requested GitHub OAuth scope and the user-facing description, which is a security and privacy concern.
+
+### Selected Improvement: Correct GitHub OAuth Scope for User Trust and Least Privilege
+
+**WHAT** to change:
+The GitHub OAuth scope requested by the application should be adjusted to align with the "read-only access to your public repositories" message presented to users on the login page. This involves removing the `public_repo` scope, which grants read/write access, and ensuring only necessary read-only permissions are requested.
+
+**WHERE** in the file(s):
+The change will be made in the `apps/web/src/lib/auth.ts` file, specifically within the `authorization` object of the `GitHub` provider configuration.
+
+**WHY** this matters:
+The current `public_repo` scope grants read/write access to all public repositories, which is a broader permission than "read-only access to your public repositories" as stated on the login page. This discrepancy creates a security and privacy concern, as users are led to believe they are granting less access than they actually are. Adhering to the principle of least privilege, the application should only request the necessary permissions. For merely displaying public repository information, the existing `read:user` scope is generally sufficient, as public repository data is often accessible without specific `repo` scopes, or `read:user` provides enough context for profile-linked public repos. Removing the `public_repo` scope will enhance user trust and align the application's behavior with its stated privacy policy.
+
+**HOW** to do it:
+1.  Locate the `apps/web/src/lib/auth.ts` file.
+2.  Find the `GitHub` provider configuration within the `NextAuth` call.
+3.  Inside the `GitHub` provider, navigate to the `authorization` object and then its `params` property.
+4.  Modify the `scope` property by removing the `public_repo` string from the comma-separated list. The resulting scope should only contain `read:user` and `user:email`.
+
+**Executor**: ```json
+{
+  "title": "[SEC] Correct GitHub OAuth Scope for User Trust and Least Privilege",
+  "body": "### Problem / Gap\nThe current GitHub OAuth scope requested by the application grants read/write access to public repositories, which contradicts the 'read-only access' description presented to users on the login page.\n\n### Solution & Insight\nTo align with the principle of least privilege and the user-facing description, the `public_repo` scope should be removed from the GitHub OAuth configuration. This adjustment ensures the application only requests necessary permissions, enhancing user trust and security.\n\n### Impact\nThis change directly addresses a significant security and privacy concern by reducing the scope of permissions requested from users, thereby improving the application's adherence to the principle of least privilege and enhancing user trust.",
+  "branch_name": "bot/upgrade-1773085414",
+  "edits": [
+    {
+      "file": "apps/web/src/lib/auth.ts",
+      "search": "GitHub({\n            clientId: process.env.GITHUB_ID,\n            clientSecret: process.env.GITHUB_SECRET,\n            authorization: { params: { scope: \"read:user user:email public_repo\" } },\n        })",
+      "replace": "GitHub({\n            clientId: process.env.GITHUB_ID,\n            clientSecret: process.env.GITHUB_SECRET,\n            authorization: { params: { scope: \"read:user user:email\" } },\n        })"
+    }
+  ]
+}
+```
+
+**Reviewer**: REJECTED x2: Your proposed change to remove the `public_repo` scope is correct and aligns with the plan. However, the search block for `apps/web/src/lib/auth.ts` did not match the original file content. Please ensure your search block is an *exact* match, including all characters, whitespace, and punctuation. In this case, the original file has a trailing comma (`,`) after `authorization: { params: { scope: "read:user user:email public_repo" } },
+        })`, which was omitted from your search block. Please correct the search block to include this comma for an exact match and retry.
+
+---
