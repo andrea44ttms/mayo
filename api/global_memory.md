@@ -1,8 +1,6 @@
 # mayo Global Memory & Experience
 
 - *[ARCHIVED] 1 older lessons were archived to preserve focus.*
-- **Repo: HOLYKEYZ**: [DX] Standardize Supabase Badge in Tech Arsenal. (Ref: https://github.com/HOLYKEYZ/HOLYKEYZ/pull/2) - *Status: MERGED - Joseph approved!*
-- **REJECTED by Reviewer**: Executor attempted full README rewrite via single search/replace, violating 50% deletion rule by replacing 100% of the search block.
 - **Repo: Joseph-Portfolio**: [DOCS] Enhance README for Better Developer Experience. (Ref: https://github.com/HOLYKEYZ/Joseph-Portfolio/pull/2) - *Status: MERGED - Joseph approved! Comment: '[vc]: #VTxJOladaTyXg7JllR4Pi5AFs0549TSelhXeZBRshBc=:eyJpc01vbm9yZXBvIjp0cnVlLCJ0'*
 - **Joseph's Feedback on Joseph-Portfolio#2**: "hi , mayo 
 did the reviewer not tell the executor to edit real code files? " — Mayo acknowledged and responded.
@@ -74,4 +72,4 @@ u're working on a fix, mayo?" — Mayo acknowledged and responded.
 " — Mayo acknowledged and responded.
 - **REJECTED by Reviewer**: Executor's search block for `backend/app/api/dependencies.py` appeared correct but failed to match according to the diff preview, resulting in 'NO CHANGES'.
 - **Joseph's Feedback on Kelegam-Tech#7**: "mayo , this version is the latest! and it's stable!" — Mayo acknowledged and responded.
-- **Repo: mayo**: [DX] Improve Portability of test_json.py. (Ref: https://github.com/HOLYKEYZ/mayo/pull/5) - *Status: PENDING REVIEW*
+- **Repo: mayo**: [DX] Improve Portability of test_json.py. (Ref: https://github.com/HOLYKEYZ/mayo/pull/5) - *Status: MERGED - Joseph approved! Comment: '[vc]: #Gu0U+vc7rtJUoFIIxGXNU9AXPdfbXsdXHnkoo/sMOaQ=:eyJpc01vbm9yZXBvIjp0cnVlLCJ0'*
