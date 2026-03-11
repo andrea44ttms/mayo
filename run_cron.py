@@ -91,11 +91,14 @@ def run_cron():
                     
                     import random
                     random.shuffle(source_files)
-                    target_paths = source_files[:10]
+                    target_paths = source_files[:7]  # Reduced from 10 to 7 to fit payload limits
                     file_contents = ""
                     for tp in target_paths:
                         content = read_file_content(issue_repo, tp)
                         if content:
+                            # Truncate to avoid 413 Payload Too Large on Groq
+                            if len(content) > 8000:
+                                content = content[:8000] + "\n...[TRUNCATED FOR LENGTH]..."
                             file_contents += f"\n--- {tp} ---\n{content}\n"
                     
                     if not file_contents:
@@ -575,7 +578,7 @@ Write a helpful, concise reply. Be friendly and technical. If it's a question, a
                 print("No source files found")
                 return
         
-        # Smart file selection: prioritize CODE files (7) over docs/config (3)
+        # Smart file selection: prioritize CODE files (5) over docs/config (2) to fit in API payload limits
         import random
         code_files = [f for f in source_files if any(f.endswith(ext) for ext in CODE_EXTENSIONS)]
         doc_files = [f for f in source_files if any(f.endswith(ext) for ext in DOC_EXTENSIONS)]
@@ -583,15 +586,18 @@ Write a helpful, concise reply. Be friendly and technical. If it's a question, a
         random.shuffle(code_files)
         random.shuffle(doc_files)
         
-        target_paths = code_files[:7] + doc_files[:3]
+        target_paths = code_files[:5] + doc_files[:2]
         if not target_paths:
-            target_paths = source_files[:10]
+            target_paths = source_files[:7]
         random.shuffle(target_paths)  # Mix them so Scanner doesn't always see code first
         
         file_contents = ""
         for tp in target_paths:
             content = read_file_content(target_repo, tp)
             if content:
+                # Truncate each file to 8000 chars to avoid 413 Payload Too Large on Groq
+                if len(content) > 8000:
+                    content = content[:8000] + "\n...[TRUNCATED FOR LENGTH]..."
                 file_contents += f"\n--- {tp} ---\n{content}\n"
         
         if not file_contents:
