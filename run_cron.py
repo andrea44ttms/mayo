@@ -765,6 +765,8 @@ Write a helpful, concise reply. Be friendly and technical. If it's a question, a
             # Pre-apply edits to compute a real diff for the Reviewer
             proposed_edits = improvement_data.get('edits', [])
             diff_preview = ""
+            import difflib
+            diff_preview = ""
             for edit in proposed_edits:
                 fpath = edit.get('file') or target_paths[0]
                 original = read_file_content(target_repo, fpath) or ""
@@ -772,15 +774,9 @@ Write a helpful, concise reply. Be friendly and technical. If it's a question, a
                 if patched != original:
                     orig_lines = original.splitlines()
                     new_lines = patched.splitlines()
-                    lines_removed = len(orig_lines) - len(new_lines)
-                    diff_preview += f"\n--- {fpath} (original: {len(orig_lines)} lines → patched: {len(new_lines)} lines, net: {'+' if lines_removed < 0 else '-'}{abs(lines_removed)})\n"
-                    # Show what was removed/added
-                    for line in orig_lines:
-                        if line not in new_lines:
-                            diff_preview += f"- {line[:120]}\n"
-                    for line in new_lines:
-                        if line not in orig_lines:
-                            diff_preview += f"+ {line[:120]}\n"
+                    diff = difflib.unified_diff(orig_lines, new_lines, fromfile='original', tofile='patched', lineterm='')
+                    diff_preview += f"\n--- {fpath}\n" + '\n'.join(list(diff)[:50]) # Show first 50 lines of diff
+                    if len(list(diff)) > 50: diff_preview += "\n...[diff truncated]..."
                 else:
                     diff_preview += f"\n--- {fpath}: NO CHANGES (search block not found or blocked by safety guard)\n"
             
@@ -796,7 +792,7 @@ Write a helpful, concise reply. Be friendly and technical. If it's a question, a
                                                    .replace('{{SCANNER_PLAN}}', scanner_plan)\
                                                    .replace('{{GLOBAL_MEMORY}}', global_memory)
                 # Append the actual diff so Reviewer sees real impact
-                reviewer_prompt += f"\n\n## ACTUAL DIFF PREVIEW (what will be committed):\n{diff_preview}\n\nIMPORTANT: If the diff shows more lines removed than expected, REJECT the edit. The Executor's search block may be matching too broadly."
+                reviewer_prompt += f"\n\n## ACTUAL DIFF PREVIEW (what will be committed):\n{diff_preview}\n\nIMPORTANT: Read the diff carefully. If it looks correct and matches the intent, APPROVE."
             except Exception as e:
                 print(f"DEBUG: Failed to load reviewer prompt: {e}")
                 final_edits = improvement_data.get('edits', [])
@@ -875,7 +871,8 @@ Write a helpful, concise reply. Be friendly and technical. If it's a question, a
                 if attempt == max_attempts:
                     print("DEBUG: Max attempts reached, skipping PR")
                     # Log the failed cycle
-                    update_ai_communication_log(gh, ts, scanner_plan or "", executor_response or "", f"REJECTED x{max_attempts}: {reviewer_feedback}")
+                    executor_json_str = json.dumps(improvement_data) if improvement_data else "{}"
+                    update_ai_communication_log(gh, ts, scanner_plan or "", executor_json_str, f"REJECTED x{max_attempts}: {reviewer_feedback}")
                     return
                 continue
 
