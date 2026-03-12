@@ -148,8 +148,8 @@ def run_cron():
                         improvement_data = extract_json_from_response(fb1_resp) if fb1_resp else None
                         
                         if not improvement_data or 'edits' not in improvement_data:
-                            from api.index import query_grok_xai
-                            fb2_resp = query_grok_xai(executor_prompt)
+                            from api.index import query_gemini_executor
+                            fb2_resp = query_gemini_executor(executor_prompt)
                             if fb2_resp:
                                 improvement_data = extract_json_from_response(fb2_resp)
                     
@@ -746,10 +746,10 @@ Write a helpful, concise reply. Be friendly and technical. If it's a question, a
                 improvement_data = extract_json_from_response(fb1_resp) if fb1_resp else None
                 
                 if not improvement_data or 'edits' not in improvement_data:
-                    # Fallback 2: The Authentic xAI Grok Key
-                    print("DEBUG: Groq Fallback failed. Engaging Ultimate xAI Grok Fallback...")
-                    from api.index import query_grok_xai
-                    fb2_resp = query_grok_xai(executor_prompt)
+                    # Fallback 2: The Ultimate Gemini Executor
+                    print("DEBUG: Groq Fallback failed. Engaging Ultimate Gemini Executor...")
+                    from api.index import query_gemini_executor
+                    fb2_resp = query_gemini_executor(executor_prompt)
                     if fb2_resp:
                         improvement_data = extract_json_from_response(fb2_resp)
             

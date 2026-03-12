@@ -33,6 +33,6 @@ jobs:
           GEMINI_NEWCRONS_API_KEY: ${{ secrets.GEMINI_NEWCRONS_API_KEY }}
           GROQ_NEWCRONS_API_KEY: ${{ secrets.GROQ_NEWCRONS_API_KEY }}
           GROK_2ND_EXECUTOR_API_KEY: ${{ secrets.GROK_2ND_EXECUTOR_API_KEY }}
-          GROK_EXECUTOR_API_KEY: ${{ secrets.GROK_EXECUTOR_API_KEY }}
+          GEMINI_EXECUTOR_API_KEY: ${{ secrets.GEMINI_EXECUTOR_API_KEY }}
           BOT_REPO_NAME: ${{ secrets.BOT_REPO_NAME }}
         run: python run_cron.py

@@ -482,7 +482,7 @@ def query_gemini_newcrons(prompt, temperature=0.2):
                 return None
     return None
 
-GROK_EXECUTOR_API_KEY = os.environ.get('GROK_EXECUTOR_API_KEY')
+GEMINI_EXECUTOR_API_KEY = os.environ.get('GEMINI_EXECUTOR_API_KEY')
 
 def query_groq(prompt, api_key=None, temperature=0.1):
     """Executor AI (Llama 3.3 70B) — produces surgical code edits via Groq."""
@@ -518,32 +518,27 @@ def query_groq(prompt, api_key=None, temperature=0.1):
                 return None
     return None
 
-def query_grok_xai(prompt, temperature=0.1):
-    """Ultimate Fallback Executor AI (Grok 2 via x.ai)."""
-    if not GROK_EXECUTOR_API_KEY:
-        print("DEBUG: GROK_EXECUTOR_API_KEY not set, skipping xAI fallback.")
+def query_gemini_executor(prompt, temperature=0.1):
+    """Ultimate Fallback Executor AI (Gemini 2.5 Flash)."""
+    if not GEMINI_EXECUTOR_API_KEY:
+        print("DEBUG: GEMINI_EXECUTOR_API_KEY not set, skipping Gemini executor fallback.")
         return None
         
-    headers = {
-        'Content-Type': 'application/json',
-        'Authorization': f'Bearer {GROK_EXECUTOR_API_KEY}'
-    }
+    headers = {'Content-Type': 'application/json'}
     payload = {
-        "model": "grok-2-latest",
-        "messages": [{"role": "user", "content": prompt}],
-        "temperature": temperature,
-        "max_tokens": 4096
+        "contents": [{"parts": [{"text": prompt}]}],
+        "generationConfig": {"temperature": temperature, "maxOutputTokens": 8000}
     }
     for attempt in range(2):
         try:
-            r = requests.post("https://api.x.ai/v1/chat/completions", json=payload, headers=headers, timeout=120)
+            r = requests.post(f"{GEMINI_API_URL}?key={GEMINI_EXECUTOR_API_KEY}", json=payload, headers=headers, timeout=120)
             r.raise_for_status()
-            return r.json()['choices'][0]['message']['content']
+            return r.json()['candidates'][0]['content']['parts'][0]['text']
         except Exception as e:
             err_body = e.response.text if hasattr(e, 'response') and e.response is not None else ""
-            print(f"xAI/Grok Error (attempt {attempt+1}/2): {e} | {err_body}")
+            print(f"Gemini Executor Error (attempt {attempt+1}/2): {e} | {err_body}")
             if attempt < 1:
-                print(f"DEBUG: xAI failed. Waiting 15s before retry...")
+                print(f"DEBUG: Gemini Executor failed. Waiting 15s before retry...")
                 time.sleep(15)
             else:
                 return None
