@@ -1,7 +1,6 @@
 # mayo Global Memory & Experience
 
 - *[ARCHIVED] 1 older lessons were archived to preserve focus.*
-- **Repo: micro-edit**: [LOGIC] Fix Redundant Global Variable Declaration. (Ref: https://github.com/HOLYKEYZ/micro-edit/pull/4) - *Status: MERGED - Joseph approved!*
 - **Repo: unfetter_proxy**: [LOGIC] Fix Critical Bug in test_web_session.py. (Ref: https://github.com/HOLYKEYZ/unfetter_proxy/pull/5) - *Status: MERGED - Joseph approved!*
 - **Repo: temple-sysinfo**: [DX] Update Compile Command in sysinfo.c. (Ref: https://github.com/HOLYKEYZ/temple-sysinfo/pull/3) - *Status: MERGED - Joseph approved!*
 - **Repo: Alexcathe**: [DX] Update Misleading Comment in Tailwind Config. (Ref: https://github.com/HOLYKEYZ/Alexcathe/pull/4) - *Status: MERGED - Joseph approved! Comment: '[vc]: #AXyG0HvSi9rIKoQPoDsgBm3tm5tfl0wmmN0tK9K9I7Y=:eyJpc01vbm9yZXBvIjp0cnVlLCJ0'*
