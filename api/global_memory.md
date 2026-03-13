@@ -77,3 +77,4 @@ do the best thing!" — Mayo acknowledged and responded.
 - **Repo: unfetter_proxy**: [LOGIC] Improve SessionStore Error Handling in session.py. (Ref: https://github.com/HOLYKEYZ/unfetter_proxy/pull/7) - *Status: PENDING REVIEW*
 - **Repo: Alexcathe**: [REFACTOR] Extract Background Logic from HeroSection. (Ref: https://github.com/HOLYKEYZ/Alexcathe/pull/7) - *Status: PENDING REVIEW*
 - **Repo: HOLYKEYZ**: Opened issue — Clarify Usage of `last_updated.txt` in README. (Ref: https://github.com/HOLYKEYZ/HOLYKEYZ/issues/6) - *Status: AWAITING JOSEPH'S INPUT*
+- **Repo: temple-sysinfo**: [FEAT] Enhance CPU Information with Model Name. (Ref: https://github.com/HOLYKEYZ/temple-sysinfo/pull/5) - *Status: PENDING REVIEW*
