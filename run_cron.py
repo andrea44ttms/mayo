@@ -174,7 +174,8 @@ def run_cron():
                                 branch = improvement_data.get('branch_name', f'bot/issue-{issue_num}-{ts}')
                                 title = improvement_data.get('title', f'Fix from approved issue #{issue_num}')
                                 
-                                if commit_changes_via_api(issue_repo, branch, file_changes, title):
+                                success, err = commit_changes_via_api(issue_repo, branch, file_changes, title)
+                                if success:
                                     pr = issue_repo.create_pull(
                                         title=f"[VALIDATED] {title}",
                                         body=f"Approved by Joseph in {issue_url}\n\n{improvement_data.get('body', '')}\n\n*Executed by Mayo 🤖*",
@@ -905,7 +906,7 @@ Write a helpful, concise reply. Be friendly and technical. If it's a question, a
 
         # Create PR
         print(f"DEBUG: Creating branch {final_branch} with validated edits for {list(file_changes.keys())}")
-        success = commit_changes_via_api(target_repo, final_branch, file_changes, final_title)
+        success, err = commit_changes_via_api(target_repo, final_branch, file_changes, final_title)
         
         if success:
             owner_login = target_repo.owner.login

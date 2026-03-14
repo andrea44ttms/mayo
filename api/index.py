@@ -219,10 +219,12 @@ def commit_changes_via_api(repo, branch_name, file_changes, commit_message):
                 repo.update_file(path, commit_message, content, contents.sha, branch=branch_name)
             except:
                 repo.create_file(path, commit_message, content, branch=branch_name)
-        return True
+        return True, ""
     except Exception as e:
+        import traceback
+        err_msg = traceback.format_exc()
         print(f"API Commit Error: {e}")
-        return False
+        return False, str(e) + "\n" + err_msg
 
 def apply_surgical_edits(content, edits):
     """Apply search/replace blocks using LINE-BASED matching (not substring).
@@ -1124,7 +1126,8 @@ def handle_issue_comment(payload):
         try:
             all_comments = list(issue.get_comments())
             # Get up to 5 preceding comments, excluding the current one
-            recent_comments = [c for c in all_comments if str(c.id) != str(comment.get('id'))][-5:]
+            filtered_comments = [c for c in all_comments if str(c.id) != str(comment.get('id'))]
+            recent_comments = [c for c_idx, c in enumerate(filtered_comments) if c_idx >= len(filtered_comments) - 5]
             if recent_comments:
                 comment_history = "\nRecent Conversation History:\n"
                 for c in recent_comments:
@@ -1256,6 +1259,7 @@ HARD RULES:
 5. PRESERVE EVERYTHING: Indentation, comments, blank lines outside your edit MUST remain untouched.
 6. COPY DIRECTLY: Copy the search text DIRECTLY from the file contents shown above. Do NOT retype from memory.
 7. NEW FILES: If you need to CREATE a new file that doesn't exist yet, use an EMPTY "search" field ("") and put the ENTIRE file content in "replace".
+8. JSON ESCAPING: You MUST strictly escape all newlines (`\n`) and quotes (`\"`) inside your JSON string values! NEVER use literal line breaks inside the string. "json.loads" will crash if you do.
 
 OUTPUT FORMAT (Strict JSON, nothing else):
 {{
@@ -1352,7 +1356,8 @@ OUTPUT FORMAT (Strict JSON, nothing else):
                         branch = f"mayo/fix-{issue_number}-{int(time.time())}"
                     
                     commit_title = final_payload.get('title', f"Fix: Addressed feedback in #{issue_number}")
-                    if commit_changes_via_api(repo, branch, file_changes, commit_title):
+                    success, commit_err = commit_changes_via_api(repo, branch, file_changes, commit_title)
+                    if success:
                         msg = f"✅ Committed changes to `{branch}`.\n\nDescription: {final_payload.get('body', commit_title)}"
                         if failed_edits:
                             safe_preview = [f"- {fe}" for i, fe in enumerate(failed_edits) if i < 5]
@@ -1366,7 +1371,7 @@ OUTPUT FORMAT (Strict JSON, nothing else):
                             except Exception as e:
                                 print(f"PR Creation error: {e}")
                     else:
-                        issue.create_comment("⚠️ Executor generated edits, but the commit failed. Check logs.")
+                        issue.create_comment(f"⚠️ Executor generated edits, but the commit failed. Check logs.\n\n```\n{commit_err}\n```")
                 else:
                     safe_preview = [f"- {fe}" for i, fe in enumerate(failed_edits) if i < 5]
                     
