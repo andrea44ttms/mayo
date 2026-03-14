@@ -36,8 +36,9 @@ def verify_signature(req):
     if sha_name != 'sha256':
         return False
     
-    mac = hmac.new(WEBHOOK_SECRET.encode(), req.data, hashlib.sha256)
-    return hmac.compare_digest(mac.hexdigest(), signature)
+    secret = WEBHOOK_SECRET or ""
+    mac = hmac.new(secret.encode('utf-8'), req.data, hashlib.sha256)
+    return hmac.compare_digest(mac.hexdigest().encode('utf-8'), signature.encode('utf-8'))
 
 # Helper: Get GitHub Client for Installation
 def get_installation_token(installation_id):
@@ -68,29 +69,29 @@ def fetch_memory(repo, issue_number, bot_login):
     """Read bot's previous comments and extract [MEMORY] blocks."""
     try:
         issue = repo.get_issue(number=issue_number)
-        memory_data = {
-            "files_read": [],
-            "context_summary": ""
-        }
+        files_read_accum: list = []
+        context_summary_acc: str = ""
         
         for comment in issue.get_comments():
             if comment.user.login.lower() == bot_login.lower():
                 body = comment.body
                 # Look for hidden memory block
-                memory_match = re.search(r'<!-- \[MEMORY\]([\s\S]*?)\[/MEMORY\] -->', body)
+                memory_match = re.search(r'<!-- \\[MEMORY\\]([\\s\\S]*?)\\[/MEMORY\\] -->', body)
                 if memory_match:
                     try:
                         mem = json.loads(memory_match.group(1).strip())
-                        if 'files_read' in mem:
-                            memory_data['files_read'].extend(mem['files_read'])
-                        if 'context_summary' in mem:
-                            memory_data['context_summary'] = mem['context_summary']
+                        mem_files = mem.get('files_read')
+                        if isinstance(mem_files, list):
+                            files_read_accum = files_read_accum + mem_files
+                        
+                        mem_summary = mem.get('context_summary')
+                        if isinstance(mem_summary, str):
+                            context_summary_acc = mem_summary
                     except json.JSONDecodeError:
                         pass
         
         # Deduplicate files
-        memory_data['files_read'] = list(set(memory_data['files_read']))
-        return memory_data
+        return {"files_read": list(set(files_read_accum)), "context_summary": context_summary_acc}
     except Exception as e:
         print(f"Memory fetch error: {e}")
         return {"files_read": [], "context_summary": ""}
@@ -101,7 +102,7 @@ def format_memory_block(data):
 
 def get_repo_structure(repo, path="", max_depth=1, current_depth=0):
     """Get repository file structure via GitHub API (single level to avoid timeout)."""
-    if current_depth > max_depth:
+    if int(current_depth) > int(max_depth):
         return ""
     
     structure = ""
@@ -110,17 +111,18 @@ def get_repo_structure(repo, path="", max_depth=1, current_depth=0):
         # Sort: dirs first, then files
         items = sorted(contents, key=lambda x: (x.type != 'dir', x.name))
         
-        for item in items[:30]:  # Limit to 30 items to avoid timeout
+        for i, item in enumerate(items):
+            if i >= 30: break
             if item.name.startswith('.'):
                 continue
             
-            indent = "  " * current_depth
+            indent = "".join(["  " for _ in range(int(current_depth))])
             marker = "📁 " if item.type == 'dir' else "📄 "
             structure += f"{indent}{marker}{item.name}\n"
             
             # Only go 1 level deep to avoid timeout
-            if item.type == 'dir' and current_depth < max_depth:
-                structure += get_repo_structure(repo, item.path, max_depth, current_depth + 1)
+            if item.type == 'dir' and int(current_depth) < int(max_depth):
+                structure += get_repo_structure(repo, item.path, max_depth, int(current_depth) + 1)
     except Exception as e:
         print(f"Repo structure error: {e}")
         structure = f"Error: {e}\n"
@@ -229,8 +231,14 @@ def apply_surgical_edits(content, edits):
     The search block is split into lines, matched against complete file lines,
     and only the matched line range is replaced.
     """
-    content_lines = content.splitlines(True)  # Keep line endings
-    original_line_count = len(content_lines)
+    content_lines_raw = content.splitlines(True)  # Keep line endings
+    c_map = {}
+    if isinstance(content_lines_raw, list):
+        for line_idx, line in enumerate(content_lines_raw):
+            if isinstance(line, str):
+                c_map[int(line_idx)] = line
+    
+    original_line_count = len(c_map)
     
     for edit in edits:
         search = edit.get('search')
@@ -238,35 +246,43 @@ def apply_surgical_edits(content, edits):
         if not search:
             continue
         
-        search_lines = search.splitlines()
+        search_lines_raw = search.splitlines()
+        s_map = {}
+        if isinstance(search_lines_raw, list):
+            for sl_idx, sl in enumerate(search_lines_raw):
+                if isinstance(sl, str):
+                    s_map[int(sl_idx)] = sl
+        search_lines_count = len(s_map)
         replace_text = replace if replace else ""
         
         # Find the search block in content using LINE-BY-LINE matching
         # Pass 1: Strict match (rstrip only)
         match_start = -1
-        for i in range(len(content_lines) - len(search_lines) + 1):
+        for enum_i in range(original_line_count - search_lines_count + 1):
             matched = True
-            for j, search_line in enumerate(search_lines):
-                content_line = content_lines[i + j].rstrip('\r\n')
+            for j in range(search_lines_count):
+                search_line = str(s_map.get(int(j), ""))
+                content_line = str(c_map.get(int(enum_i) + int(j), "")).rstrip('\\r\\n')
                 if content_line.rstrip() != search_line.rstrip():
                     matched = False
                     break
             if matched:
-                match_start = i
+                match_start = enum_i
                 break
         
         # Pass 2: Fuzzy match (strip ALL whitespace) — handles indentation mismatches from LLMs
         if match_start == -1:
-            for i in range(len(content_lines) - len(search_lines) + 1):
+            for enum_i in range(original_line_count - search_lines_count + 1):
                 matched = True
-                for j, search_line in enumerate(search_lines):
-                    content_line = content_lines[i + j].rstrip('\r\n')
+                for j in range(search_lines_count):
+                    search_line = str(s_map.get(int(j), ""))
+                    content_line = str(c_map.get(int(enum_i) + int(j), "")).rstrip('\\r\\n')
                     if content_line.strip() != search_line.strip():
                         matched = False
                         break
                 if matched:
-                    match_start = i
-                    print(f"DEBUG: Fuzzy-matched search block at line {i+1} (whitespace-tolerant)")
+                    match_start = enum_i
+                    print(f"DEBUG: Fuzzy-matched search block at line {enum_i+1} (whitespace-tolerant)")
                     break
         
         # Pass 3: Markdown-normalized match — handles code fences, heading variations, collapsed whitespace
@@ -284,97 +300,108 @@ def apply_surgical_edits(content, edits):
                 s = re_match.sub(r'^(#{1,6})\s+', r'\1 ', s)
                 return s.lower()
             
-            # Skip search lines that are LLM truncation artifacts (# ..., // ..., etc.)
+            # Skip search lines that are LLM truncation artifacts
             clean_search_indices = []
-            for idx, sl in enumerate(search_lines):
-                stripped = sl.strip()
-                if stripped in ('# ...', '// ...', '...', '# ...', '/* ... */', '// rest of code'):
-                    continue
-                clean_search_indices.append(idx)
+            for idx in range(search_lines_count):
+                sl = str(s_map.get(int(idx), ""))
+                stripped_sl = sl.strip()
+                if stripped_sl not in ('# ...', '// ...', '...', '# ...', '/* ... */', '// rest of code'):
+                    clean_search_indices.append(int(idx))
             
             if len(clean_search_indices) >= 2:  # Need at least 2 real lines to match
-                for i in range(len(content_lines) - len(clean_search_indices) + 1):
+                for enum_i in range(original_line_count - len(clean_search_indices) + 1):
                     matched = True
                     offset = 0
                     for ci_idx, search_idx in enumerate(clean_search_indices):
                         # Find the next matching content line starting from current position
                         found = False
-                        search_norm = normalize_md(search_lines[search_idx])
+                        search_idx_int = int(search_idx)
+                        ci_idx_int = int(ci_idx)
+                        search_norm = normalize_md(str(s_map.get(search_idx_int, "")))
                         if not search_norm:
                             continue
-                        while i + offset + ci_idx < len(content_lines):
-                            content_norm = normalize_md(content_lines[i + offset + ci_idx].rstrip('\r\n'))
-                            if content_norm == search_norm:
-                                found = True
-                                break
-                            elif ci_idx == 0:
-                                # First line must match at current position
-                                break
-                            else:
-                                offset += 1
-                                if offset > 3:  # Don't skip more than 3 lines
+                        if isinstance(offset, int):
+                            while int(enum_i) + offset + int(ci_idx_int) < original_line_count:
+                                content_idx = int(enum_i) + offset + int(ci_idx_int)
+                                content_norm = normalize_md(str(c_map.get(content_idx, "")).rstrip('\\r\\n'))
+                                if content_norm == search_norm:
+                                    found = True
                                     break
+                                elif ci_idx_int == 0:
+                                    # First line must match at current position
+                                    break
+                                else:
+                                    offset += 1
+                                    if offset > 3:  # Don't skip more than 3 lines
+                                        break
                         if not found:
                             matched = False
                             break
                     if matched:
                         # Calculate the full match range from first to last matched line
-                        first_search = clean_search_indices[0]
-                        last_search = clean_search_indices[-1]
-                        match_start = i
+                        first_search = 0
+                        last_search = 0
+                        for enum_x, x in enumerate(clean_search_indices):
+                            if enum_x == 0:
+                                first_search = x
+                            last_search = x
+                        match_start = int(enum_i)
                         # Recalculate search_lines to cover the full range in the file
-                        search_lines = search_lines  # Keep original for replacement calculation
-                        print(f"DEBUG: Markdown-normalized match at line {i+1} (code fence / heading tolerant)")
+                        # Keep original for replacement calculation
+                        print(f"DEBUG: Markdown-normalized match at line {enum_i+1} (code fence / heading tolerant)")
                         break
         
         # Pass 4: Single-line partial substring match
         # If the LLM just gave us a snippet like "os.getenv('API_KEY')" without indentation
-        if match_start == -1 and len(search_lines) == 1:
-            search_str = search_lines[0].strip()
+        if match_start == -1 and search_lines_count == 1:
+            search_str = str(s_map.get(0, "")).strip()
             if len(search_str) > 5: # Don't replace tiny things like "()"
                 # Find all lines containing this substring
                 matches = []
-                for i, line in enumerate(content_lines):
+                for i in range(original_line_count):
+                    line = str(c_map.get(i, ""))
                     if search_str in line:
-                        matches.append(i)
+                        matches.append(int(i))
                 
                 # Only apply if we found exactly ONE unambiguous match
                 if len(matches) == 1:
-                    match_start = matches[0]
+                    match_start_int = int(matches[0])
+                    match_start = match_start_int
                     # We need to hack the replacement to only replace the substring within the line
-                    original_line = content_lines[match_start]
-                    new_line = original_line.replace(search_str, replace_text.strip())
+                    original_line = str(c_map.get(match_start_int, ""))
+                    new_line = original_line.replace(search_str, str(replace_text).strip())
                     
                     # Instead of rewriting the main loop logic, we just manually apply it here
                     # and continue to the next edit
-                    content_lines[match_start] = new_line
+                    c_map[match_start_int] = new_line
                     print(f"DEBUG: Substring match applied for single line at {match_start+1}")
                     continue
         
         # Pass 5: Multi-line anchor match — find the first search line in the file,
         # then replace from that anchor for the length of the search block.
         # This handles cases where the LLM's middle lines differ slightly.
-        if match_start == -1 and len(search_lines) >= 2:
-            first_line = search_lines[0].strip()
+        if match_start == -1 and search_lines_count >= 2:
+            first_line = str(s_map.get(0, "")).strip()
             if len(first_line) > 5:
                 anchors = []
-                for i, line in enumerate(content_lines):
+                for i in range(original_line_count):
+                    line = str(c_map.get(i, ""))
                     if line.strip() == first_line:
-                        anchors.append(i)
+                        anchors.append(int(i))
                 
                 if len(anchors) == 1:
-                    match_start = anchors[0]
-                    print(f"DEBUG: Anchor match (first-line) at line {match_start+1} for {len(search_lines)}-line block")
+                    match_start = int(anchors[0])
+                    print(f"DEBUG: Anchor match (first-line) at line {match_start+1} for {search_lines_count}-line block")
         
         if match_start == -1:
             print(f"DEBUG: Search block not found: {search[:50]}...")
             continue
         
-        match_end = match_start + len(search_lines)
+        match_end = match_start + search_lines_count
         
         # Build the replacement lines (preserve file's line ending style)
         line_ending = '\n'
-        if content_lines and '\r\n' in content_lines[0]:
+        if original_line_count > 0 and '\r\n' in c_map.get(0, ""):
             line_ending = '\r\n'
         
         replacement_lines = []
@@ -382,17 +409,26 @@ def apply_surgical_edits(content, edits):
             replacement_lines.append(line + line_ending)
         
         # SAFETY GUARD 2: Test-apply and check total file damage
-        test_lines = content_lines[:match_start] + replacement_lines + content_lines[match_end:]
-        lines_lost = original_line_count - len(test_lines)
+        test_map = {}
+        for enum_c in range(original_line_count):
+            if int(enum_c) < match_start or int(enum_c) >= match_end:
+                test_map[len(test_map)] = str(c_map.get(int(enum_c), ""))
+            elif int(enum_c) == match_start:
+                for rep in replacement_lines:
+                    test_map[len(test_map)] = str(rep)
+        
+        lines_lost = original_line_count - len(test_map)
         # Allow removing up to 25 lines or 30% of the file, whichever is higher
-        if lines_lost > max(25, original_line_count * 0.3):
+        if lines_lost > max(25, int(original_line_count * 0.3)):
             print(f"DEBUG: BLOCKED catastrophic edit - would remove {lines_lost}/{original_line_count} total lines ({search[:60]}...)")
             continue
         
-        content_lines = test_lines
-        print(f"DEBUG: Applied edit at lines {match_start+1}-{match_end} ({len(search_lines)} lines matched, {len(replacement_lines)} replacement lines)")
+        c_map = test_map
+        original_line_count = len(c_map)
+        
+        print(f"DEBUG: Applied edit at lines {match_start+1}-{match_end} ({search_lines_count} lines matched, {len(replacement_lines)} replacement lines)")
     
-    return ''.join(content_lines)
+    return ''.join([str(c_map.get(i, "")) for i in range(original_line_count)])
 
 
 def query_gemini(prompt, context="", temperature=0.4):
@@ -446,7 +482,7 @@ def query_gemini_scanner(prompt, temperature=0.2):
             r.raise_for_status()
             return r.json()['candidates'][0]['content']['parts'][0]['text']
         except Exception as e:
-            err_body = e.response.text if hasattr(e, 'response') and e.response is not None else ""
+            err_body = str(getattr(getattr(e, 'response', None), 'text', ''))
             print(f"Scanner Error (attempt {attempt+1}/3, key {'primary' if attempt != 1 else 'fallback'}): {e} | {err_body}")
             if attempt < 2:
                 wait = [10, 30, 60][attempt]
@@ -473,7 +509,7 @@ def query_gemini_newcrons(prompt, temperature=0.2):
             r.raise_for_status()
             return r.json()['candidates'][0]['content']['parts'][0]['text']
         except Exception as e:
-            err_body = e.response.text if hasattr(e, 'response') and e.response is not None else ""
+            err_body = str(getattr(getattr(e, 'response', None), 'text', ''))
             print(f"NewCrons Gemini Error (attempt {attempt+1}/2): {e} | {err_body}")
             if attempt < 1:
                 print(f"DEBUG: NewCrons failed. Waiting 15s before retry with fallback key...")
@@ -509,8 +545,9 @@ def query_groq(prompt, api_key=None, temperature=0.1):
             r.raise_for_status()
             return r.json()['choices'][0]['message']['content']
         except Exception as e:
-            err_body = e.response.text if hasattr(e, 'response') and e.response is not None else ""
-            print(f"Groq/Llama Error (key {current_key[:10]}... attempt {attempt+1}/2): {e} | {err_body}")
+            err_body = str(getattr(getattr(e, 'response', None), 'text', ''))
+            key_preview = "".join([c for i, c in enumerate(str(current_key)) if i < 10])
+            print(f"Groq/Llama Error (key {key_preview}... attempt {attempt+1}/2): {e} | {err_body}")
             if attempt < 1:
                 print(f"DEBUG: Groq failed. Waiting 15s before retry with {'fallback' if keys[1] != api_key else 'same'} key...")
                 time.sleep(15)
@@ -535,7 +572,7 @@ def query_gemini_executor(prompt, temperature=0.1):
             r.raise_for_status()
             return r.json()['candidates'][0]['content']['parts'][0]['text']
         except Exception as e:
-            err_body = e.response.text if hasattr(e, 'response') and e.response is not None else ""
+            err_body = str(getattr(getattr(e, 'response', None), 'text', ''))
             print(f"Gemini Executor Error (attempt {attempt+1}/2): {e} | {err_body}")
             if attempt < 1:
                 print(f"DEBUG: Gemini Executor failed. Waiting 15s before retry...")
@@ -562,7 +599,7 @@ def query_gemini_reviewer(prompt, temperature=0.1):
             r.raise_for_status()
             return r.json()['candidates'][0]['content']['parts'][0]['text']
         except Exception as e:
-            err_body = e.response.text if hasattr(e, 'response') and e.response is not None else ""
+            err_body = str(getattr(getattr(e, 'response', None), 'text', ''))
             print(f"Reviewer Error (attempt {attempt+1}/3, key {'primary' if attempt != 1 else 'fallback'}): {e} | {err_body}")
             if attempt < 2:
                 wait = [10, 30, 60][attempt]
@@ -613,7 +650,7 @@ def audit_pending_reviews(gh):
                         joseph_comment = f" Comment: '{c.body[:80]}'"
                         break
                 
-                updated_memory = updated_memory.replace(
+                updated_memory = str(updated_memory).replace(
                     f"(Ref: {pr_url}) - *Status: PENDING REVIEW*",
                     f"(Ref: {pr_url}) - *Status: {status}{joseph_comment}*"
                 )
@@ -622,15 +659,21 @@ def audit_pending_reviews(gh):
                 print(f"DEBUG: Failed to audit PR {pr_url}: {e}")
         
         # Memory Decay: Keep only the 30 most recent entries. Archive older ones.
-        mem_lines = updated_memory.split('\n')
-        repo_entries = [i for i, line in enumerate(mem_lines) if line.startswith('- **Repo:')]
+        mem_lines = str(updated_memory).split('\n')
+        repo_entries = []
+        for line_idx, line in enumerate(mem_lines):
+            if isinstance(line, str) and line.startswith('- **Repo:'):
+                repo_entries.append(int(line_idx))
         
         if len(repo_entries) > 30:
-            cutoff_idx = repo_entries[-30]
+            cutoff_idx = int(repo_entries[-30])
             header = mem_lines[0]
             archived_count = len(repo_entries) - 30
             summary_msg = f"\n- *[ARCHIVED] {archived_count} older lessons were archived to preserve focus.*"
-            new_lines = [header, summary_msg] + mem_lines[cutoff_idx:]
+            new_lines = [header, summary_msg]
+            for m_idx, m_line in enumerate(mem_lines):
+                if m_idx >= cutoff_idx:
+                    new_lines.append(m_line)
             updated_memory = '\n'.join(new_lines)
 
         if updated_memory != memory:
@@ -850,26 +893,30 @@ Diff:
         new_files_read = []
         
         if needed_files and isinstance(needed_files, list):
-            files_to_read = [f for f in needed_files if f not in files_already_read][:5]
+            ftr_filtered = [f for f in needed_files if f not in files_already_read]
+            files_to_read = [f for f_idx, f in enumerate(ftr_filtered) if f_idx < 5]
             
             if files_to_read:
-                file_contents = ""
+                file_contents_acc = ""
                 for file_path in files_to_read:
                     if ".." in file_path or file_path.startswith("/"):
                         continue
                     content = read_file_content(repo, file_path)
-                    if content:
-                        file_contents += f"\n--- {file_path} ---\n{content}\n"
+                    if isinstance(content, str):
+                        file_contents_acc += f"\n--- {file_path} ---\n{content}\n"
                         new_files_read.append(file_path)
                 
-                expanded_context += f"\n\nFile Contents:\n{file_contents}"
+                if file_contents_acc:
+                    expanded_context += f"\n\nFile Contents:\n{file_contents_acc}"
         
         # Parse diff for file/line info
         diff_files = parse_diff_files(diff_content)
         file_line_info = ""
         for df in diff_files:
-            ranges = ", ".join([f"L{r['start']}-{r['end']}" for r in df['lines']])
-            file_line_info += f"  {df['path']}: {ranges}\n"
+            lines_list = df.get('lines')
+            if isinstance(lines_list, list):
+                ranges = ", ".join([f"L{r.get('start', '?')}-{r.get('end', '?')}" for r in lines_list if isinstance(r, dict)])
+                file_line_info += f"  {df.get('path', 'unknown')}: {ranges}\n"
         
         # Step 2: Generate review with committable suggestions
         prompt = f"""You are an expert Principal Software Engineer. 
@@ -906,8 +953,13 @@ Rules:
 """
         review_raw = query_gemini(prompt, temperature=0.2)
         
-        all_files = files_already_read + new_files_read
-        memory_block = format_memory_block({"files_read": all_files})
+        all_files_for_mem = []
+        if isinstance(files_already_read, list):
+            all_files_for_mem += files_already_read
+        if isinstance(new_files_read, list):
+            all_files_for_mem += new_files_read
+            
+        memory_block = format_memory_block({"files_read": all_files_for_mem})
         
         # Try to parse as structured suggestions
         suggestions_data = None
@@ -925,7 +977,8 @@ Rules:
             
             # Build inline review comments
             review_comments = []
-            for s in suggestions[:5]:  # Max 5
+            for enum_s, s in enumerate(suggestions):
+                if enum_s >= 5: break
                 file_path = s.get('file', '')
                 line_num = s.get('line', 0)
                 original = s.get('original', '')
@@ -973,7 +1026,8 @@ Rules:
                     print(f"Review API exception: {review_err}")
                     # Fallback: post as regular comment with suggestion blocks
                     fallback = f"🤖 **Automated Code Review**\n\n{summary}\n\n"
-                    for s in suggestions[:5]:
+                    for enum_s, s in enumerate(suggestions):
+                        if enum_s >= 5: break
                         fallback += f"**{s.get('file', '')}** (L{s.get('line', '?')}): {s.get('reason', '')}\n"
                         fallback += f"```suggestion\n{s.get('replacement', '')}\n```\n\n"
                     pr.create_issue_comment(f"{fallback}{memory_block}")
@@ -1056,14 +1110,27 @@ def handle_issue_comment(payload):
         repo_structure = get_repo_structure(repo)
         
         # 3. PR Context if applicable
+        issue_context = f"Issue Title: {issue.title}\nIssue Body:\n{issue.body}\n"
         pr_context = ""
         if issue.pull_request:
             try:
                 pr = repo.get_pull(issue_number)
                 diff_content = requests.get(pr.diff_url).text[:20000]
-                pr_context = f"PR Title: {pr.title}\nDiff:\n{diff_content}"
+                pr_context = f"This is a pull request.\nPR Title: {pr.title}\nDiff:\n{diff_content}"
             except: pass
     
+        # Get preceding comments for context
+        comment_history = ""
+        try:
+            all_comments = list(issue.get_comments())
+            # Get up to 5 preceding comments, excluding the current one
+            recent_comments = [c for c in all_comments if str(c.id) != str(comment.get('id'))][-5:]
+            if recent_comments:
+                comment_history = "\nRecent Conversation History:\n"
+                for c in recent_comments:
+                    comment_history += f"@{c.user.login}: {c.body}\n---\n"
+        except: pass
+        
         base_context = f"""
 Repository Structure:
 {repo_structure}
@@ -1071,7 +1138,9 @@ Repository Structure:
 Files already read (from memory):
 {', '.join(files_already_read) if files_already_read else 'None'}
 
+{issue_context}
 {pr_context}
+{comment_history}
 """
         
         # 4. Ask Gemini what files it needs
@@ -1081,7 +1150,8 @@ Files already read (from memory):
         new_files_read = []
         
         if needed_files and isinstance(needed_files, list):
-            files_to_read = [f for f in needed_files if f not in files_already_read][:5]
+            ftr_filtered = [f for f in needed_files if f not in files_already_read]
+            files_to_read = [f for f_idx, f in enumerate(ftr_filtered) if f_idx < 5]
             
             if files_to_read:
                 issue.create_comment(f"👀 Checking: `{', '.join(files_to_read)}`...")
@@ -1112,8 +1182,13 @@ Instructions:
         plan = query_gemini_reviewer(reviewer_prompt)
         if not plan: return
         
-        all_files = files_already_read + new_files_read
-        memory_block = format_memory_block({"files_read": all_files})
+        all_files_for_mem = []
+        if isinstance(files_already_read, list):
+            all_files_for_mem += files_already_read
+        if isinstance(new_files_read, list):
+            all_files_for_mem += new_files_read
+            
+        memory_block = format_memory_block({"files_read": all_files_for_mem})
         
         issue.create_comment(f"🛡️ **Reviewer (Mayo):**\n{plan}{memory_block}")
         
@@ -1137,15 +1212,30 @@ Instructions:
             issue.create_comment("⚡ *Executor (Llama 3.3 70B) is now writing the code changes...*")
             
             # Re-read the exact file contents for the Executor (with clear delimiters)
-            exact_files_context = ""
-            files_for_executor = new_files_read if new_files_read else files_already_read[:3] # Limit to 3 files
+            exact_files_context_list = []
+            files_for_executor = []
+            if isinstance(new_files_read, list) and new_files_read:
+                files_for_executor = new_files_read
+            elif isinstance(files_already_read, list):
+                for f_idx, f in enumerate(files_already_read):
+                    if f_idx < 3:
+                        files_for_executor.append(f)
+            
             for fp in files_for_executor:
                 fc = read_file_content(repo, fp)
-                if fc:
+                if isinstance(fc, str):
                     # Truncate to avoid 413 Payload Too Large on Groq
                     if len(fc) > 7000:
-                        fc = fc[:7000] + "\n...[TRUNCATED FOR LENGTH]..."
-                    exact_files_context += f"\n--- START OF FILE: {fp} ---\n{fc}\n--- END OF FILE: {fp} ---\n"
+                        fc_trunc = []
+                        for char_idx, char in enumerate(fc):
+                            if char_idx < 7000:
+                                fc_trunc.append(char)
+                            else:
+                                break
+                        fc = "".join(fc_trunc) + "\n...[TRUNCATED FOR LENGTH]..."
+                    exact_files_context_list.append(f"\n--- START OF FILE: {fp} ---\n{fc}\n--- END OF FILE: {fp} ---\n")
+            
+            exact_files_context = "".join(exact_files_context_list)
             
             executor_prompt = f"""You are Mayo, the Executor AI (Surgical Code Engineer).
 The Reviewer AI has established this plan based on Joseph's feedback:
@@ -1248,7 +1338,7 @@ OUTPUT FORMAT (Strict JSON, nothing else):
                         msg = f"✅ Committed changes to `{branch}`.\n\nDescription: {final_payload.get('body', commit_title)}"
                         if failed_edits:
                             safe_preview = [f"- {fe}" for i, fe in enumerate(failed_edits) if i < 5]
-                            msg += f"\\n\\n⚠️ Some edits failed to match:\\n" + "\\n".join(safe_preview)
+                            msg += f"\n\n⚠️ Some edits failed to match:\n" + "\n".join(safe_preview)
                         issue.create_comment(msg)
                         
                         if not issue.pull_request:
@@ -1262,8 +1352,8 @@ OUTPUT FORMAT (Strict JSON, nothing else):
                 else:
                     safe_preview = [f"- {fe}" for i, fe in enumerate(failed_edits) if i < 5]
                     
-                    debug_info = "\\n".join(safe_preview) if failed_edits else "No debug info available"
-                    issue.create_comment(f"⚠️ Executor generated edits, but none matched the file contents.\\n\\n**Failed search blocks:**\\n{debug_info}\\n\\n*Retrying on next trigger.*")
+                    debug_info = "\n".join(safe_preview) if failed_edits else "No debug info available"
+                    issue.create_comment(f"⚠️ Executor generated edits, but none matched the file contents.\n\n**Failed search blocks:**\n{debug_info}\n\n*Retrying on next trigger.*")
             else:
                  issue.create_comment("⚠️ Executor failed to generate valid JSON edits.")
     except Exception as e:
