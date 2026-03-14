@@ -195,13 +195,52 @@ Do not explain. Just return the JSON.
 def extract_json_from_response(text):
     if not text: return None
     json_patterns = [r'```json\s*([\s\S]*?)\s*```', r'```\s*([\s\S]*?)\s*```', r'\{[\s\S]*"edits"[\s\S]*\}']
+    
     for pattern in json_patterns:
         match = re.search(pattern, text)
         if match:
+            json_str = match.group(1) if '```' in pattern else match.group(0)
             try:
-                json_str = match.group(1) if '```' in pattern else match.group(0)
                 return json.loads(json_str)
-            except: continue
+            except Exception as e:
+                # Attempt to fix the string before failing completely
+                try:
+                    import ast
+                    parsed = ast.literal_eval(json_str.strip())
+                    if isinstance(parsed, dict):
+                         return parsed
+                except Exception:
+                    pass
+                
+                # Fix unescaped newlines in strings (common LLM hallucination)
+                try:
+                    def escape_newlines_in_json_strings(s):
+                        result = []
+                        in_string = False
+                        escaped = False
+                        for char in s:
+                            if char == '"' and not escaped:
+                                in_string = not in_string
+                            elif char == '\\' and not escaped:
+                                escaped = True
+                            else:
+                                escaped = False
+                                
+                            if in_string and char == '\n':
+                                result.append('\\n')
+                            elif in_string and char == '\r':
+                                result.append('\\r')
+                            elif in_string and char == '\t':
+                                result.append('\\t')
+                            else:
+                                result.append(char)
+                        return "".join(result)
+                    
+                    fixed_str = escape_newlines_in_json_strings(json_str)
+                    return json.loads(fixed_str)
+                except Exception:
+                    pass
+                continue
     return None
 
 def commit_changes_via_api(repo, branch_name, file_changes, commit_message):
