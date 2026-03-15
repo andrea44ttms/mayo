@@ -110,3 +110,4 @@ mayo , fix it!" — Mayo acknowledged and responded.
 - **REJECTED by Reviewer**: Executor's search blocks failed to match due to incorrect representation of newlines/whitespace and missing docstrings/comments, leading to 'NO CHANGES'. Also, one replacement block was redundant and incorrectly structured.
 - **REJECTED by Reviewer**: Executor's search block failed to apply, and successful edit introduced redundancy by hardcoding values already defined as class attributes.
 - **REJECTED by Reviewer**: Executor submitted duplicate edits and missed dependent changes (updating imports/call sites) for a function removal, leading to potentially broken code.
+- **REJECTED by Reviewer**: Executor deleted a function but failed to update its call sites, leading to an incomplete and breaking change. Emphasize full plan execution.
