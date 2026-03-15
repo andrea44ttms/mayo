@@ -1213,9 +1213,6 @@ def handle_issue_comment(payload):
         
         if not mentioned: return
 
-        # Only post "thinking" after confirming we should respond
-        issue_obj.create_comment("🧠 **Mayo is thinking...**")
-
         # 1. Fetch Memory with [MEMORY] blocks
         memory = fetch_memory(repo, issue_number, bot_login)
         files_already_read = memory.get('files_read', [])
