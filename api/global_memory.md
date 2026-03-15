@@ -1,9 +1,6 @@
 # mayo Global Memory & Experience
 
 - *[ARCHIVED] 1 older lessons were archived to preserve focus.*
-- **Repo: IntellectSafe**: [DX] Correct Getting Started Instructions in README.md. (Ref: https://github.com/HOLYKEYZ/IntellectSafe/pull/10) - *Status: MERGED - Joseph approved! Comment: '[vc]: #Kt8C/CNUZvwoIElL2jG3K0cXVaVh7+wx/dmiz+Qp7+k=:eyJpc01vbm9yZXBvIjp0cnVlLCJ0'*
-- **Joseph's Feedback on IntellectSafe#10**: "thanks!, mayo , slipped off my mind😅" — Mayo acknowledged and responded.
-- **REJECTED by Reviewer**: Executor's search block for README.md failed to match due to incorrect inclusion of '#' characters and missing blank line. Also, the replacement block incorrectly commented out executable commands.
 - **Repo: VULNRIX**: [DX] Clarify Environment Variable Setup for CLI in README. (Ref: https://github.com/HOLYKEYZ/VULNRIX/pull/17) - *Status: MERGED - Joseph approved!*
 - **Repo: ModelFang**: [DX] Improve README Configuration Section. (Ref: https://github.com/HOLYKEYZ/ModelFang/pull/6) - *Status: MERGED - Joseph approved! Comment: '[vc]: #BESEIDeorTUQHPwL8xg0ag2xzlZ5PPMYRv9W8nrmy1g=:eyJpc01vbm9yZXBvIjp0cnVlLCJ0'*
 - **Repo: model-unfetter**: [DX] Correct Development Setup Instructions in README. (Ref: https://github.com/HOLYKEYZ/model-unfetter/pull/3) - *Status: MERGED - Joseph approved!*
