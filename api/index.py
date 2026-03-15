@@ -29,16 +29,30 @@ GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
 # Helper: Verify Webhook Signature
 def verify_signature(req):
     signature = req.headers.get('X-Hub-Signature-256')
-    if not signature or not WEBHOOK_SECRET:
-        return False
+    if not WEBHOOK_SECRET:
+        print("ERROR: WEBHOOK_SECRET is not set in environment variables.")
+        return False, "WEBHOOK_SECRET_MISSING"
+    if not signature:
+        print("ERROR: No X-Hub-Signature-256 header provided.")
+        return False, "SIGNATURE_MISSING"
     
-    sha_name, signature = signature.split('=')
+    try:
+        sha_name, signature_hash = signature.split('=')
+    except ValueError:
+        return False, "INVALID_SIGNATURE_FORMAT"
+
     if sha_name != 'sha256':
-        return False
+        return False, "UNSUPPORTED_HASH_ALGORITHM"
     
-    secret = WEBHOOK_SECRET or ""
-    mac = hmac.new(secret.encode('utf-8'), req.data, hashlib.sha256)
-    return hmac.compare_digest(mac.hexdigest().encode('utf-8'), signature.encode('utf-8'))
+    mac = hmac.new(WEBHOOK_SECRET.encode('utf-8'), req.data, hashlib.sha256)
+    expected = mac.hexdigest()
+    if not hmac.compare_digest(expected.encode('utf-8'), signature_hash.encode('utf-8')):
+        safe_expected = expected[:8]
+        safe_got = signature_hash[:8]
+        print(f"ERROR: Signature mismatch. Expected {safe_expected}... but got {safe_got}...")
+        return False, "SIGNATURE_MISMATCH"
+    
+    return True, "OK"
 
 # Helper: Get GitHub Client for Installation
 def get_installation_token(installation_id):
@@ -799,20 +813,49 @@ def get_status():
 
  
 
+@app.route('/health', methods=['GET'])
+def health():
+    """Diagnostic endpoint to verify environments."""
+    status = {
+        'status': 'Online',
+        'env_checks': {
+            'APP_ID': bool(APP_ID),
+            'PRIVATE_KEY': bool(PRIVATE_KEY and 'BEGIN RSA PRIVATE KEY' in PRIVATE_KEY),
+            'WEBHOOK_SECRET': bool(WEBHOOK_SECRET),
+            'GEMINI_KEY': bool(GEMINI_API_KEY)
+        },
+        'bot_login': BOT_LOGIN_CACHE or 'Not cached yet'
+    }
+    return jsonify(status)
+
+@app.errorhandler(500)
+def handle_500(e):
+    import traceback
+    err = traceback.format_exc()
+    print(f"SERVER CRASH (500): {err}")
+    return jsonify({'error': 'Internal Server Error', 'traceback': err}), 500
+
 @app.route('/webhook', methods=['POST'])
 def webhook():
-    if not verify_signature(request):
-        return jsonify({'error': 'Invalid signature'}), 401
+    is_valid, reason = verify_signature(request)
+    if not is_valid:
+        print(f"Webhook rejected: {reason}")
+        return jsonify({'error': 'Invalid signature', 'reason': reason}), 401
     
     event_type = request.headers.get('X-GitHub-Event')
     payload = request.json
     
-    if event_type == 'issue_comment' and payload.get('action') == 'created':
-        handle_issue_comment(payload)
-    elif event_type == 'pull_request' and payload.get('action') in ['opened', 'synchronize']:
-         handle_pr(payload)
-    elif event_type == 'pull_request_review' and payload.get('action') == 'submitted':
-        handle_pr_review_feedback(payload)
+    try:
+        if event_type == 'issue_comment' and payload.get('action') == 'created':
+            handle_issue_comment(payload)
+        elif event_type == 'pull_request' and payload.get('action') in ['opened', 'synchronize']:
+             handle_pr(payload)
+        elif event_type == 'pull_request_review' and payload.get('action') == 'submitted':
+            handle_pr_review_feedback(payload)
+    except Exception as e:
+        import traceback
+        print(f"WEBHOOK CRASH: {traceback.format_exc()}")
+        return jsonify({'status': 'error', 'message': str(e)}), 500
 
     return jsonify({'status': 'ok'})
 
