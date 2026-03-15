@@ -1,7 +1,6 @@
 # mayo Global Memory & Experience
 
 - *[ARCHIVED] 1 older lessons were archived to preserve focus.*
-- **Repo: model-unfetter**: [DX] Correct Development Setup Instructions in README. (Ref: https://github.com/HOLYKEYZ/model-unfetter/pull/3) - *Status: MERGED - Joseph approved!*
 - **Repo: micro-edit**: [LOGIC] Define min macro for compilation. (Ref: https://github.com/HOLYKEYZ/micro-edit/pull/5) - *Status: MERGED - Joseph approved!*
 - **REJECTED by Reviewer**: Executor's search block for `test_web_session.py` failed to match due to missing comment lines, and the diff preview showed truncated replacement text for another edit. Emphasize exact match and verify full replacement.
 - **REJECTED by Reviewer**: Executor's search block mismatch led to partial match and functional error; also, replacement string was incomplete. Emphasize exact match and complete, correct replacement.
@@ -103,12 +102,12 @@ mayo , fix it!" — Mayo acknowledged and responded.
 - **Joseph's Feedback on git-pulse#2**: "try again" — Mayo acknowledged and responded.
 - **Joseph's Feedback on git-pulse#2**: "proceed?" — Mayo acknowledged and responded.
 - **REJECTED by Reviewer**: Executor's search blocks for `micro-edit` failed to match due to incorrect function name (`vsprintf` vs `vsnprintf`) and likely incorrect indentation for `strcat` replacement, leading to 'NO CHANGES'. Emphasize exact match including all characters and whitespace.
-- **Repo: micro-edit**: [REFACTOR] Remove Unused abuf Struct. (Ref: https://github.com/HOLYKEYZ/micro-edit/pull/7) - *Status: PENDING REVIEW*
-- **Repo: VULNRIX**: [LOGIC] Remove Deprecated Breach Checking APIs from Health Checks. (Ref: https://github.com/HOLYKEYZ/VULNRIX/pull/21) - *Status: PENDING REVIEW*
-- **Repo: Joseph-Portfolio**: [DX] Improve Cross-Platform Font Loading in generate_flowchart.py. (Ref: https://github.com/HOLYKEYZ/Joseph-Portfolio/pull/7) - *Status: PENDING REVIEW*
+- **Repo: micro-edit**: [REFACTOR] Remove Unused abuf Struct. (Ref: https://github.com/HOLYKEYZ/micro-edit/pull/7) - *Status: MERGED - Joseph approved!*
+- **Repo: VULNRIX**: [LOGIC] Remove Deprecated Breach Checking APIs from Health Checks. (Ref: https://github.com/HOLYKEYZ/VULNRIX/pull/21) - *Status: REJECTED - Joseph closed this*
+- **Repo: Joseph-Portfolio**: [DX] Improve Cross-Platform Font Loading in generate_flowchart.py. (Ref: https://github.com/HOLYKEYZ/Joseph-Portfolio/pull/7) - *Status: MERGED - Joseph approved! Comment: '[vc]: #ff/6wZPGnzDwHPbRyWemwSzCrsSvxHo96Pys/ymigrU=:eyJpc01vbm9yZXBvIjp0cnVlLCJ0'*
 - **REJECTED by Reviewer**: Executor's search blocks failed to match due to incorrect representation of newlines/whitespace and missing docstrings/comments, leading to 'NO CHANGES'. Also, one replacement block was redundant and incorrectly structured.
 - **REJECTED by Reviewer**: Executor's search block failed to apply, and successful edit introduced redundancy by hardcoding values already defined as class attributes.
 - **REJECTED by Reviewer**: Executor submitted duplicate edits and missed dependent changes (updating imports/call sites) for a function removal, leading to potentially broken code.
 - **REJECTED by Reviewer**: Executor deleted a function but failed to update its call sites, leading to an incomplete and breaking change. Emphasize full plan execution.
-- **Repo: model-unfetter**: [DX] Redirect ProgressBar Output to sys.stderr. (Ref: https://github.com/HOLYKEYZ/model-unfetter/pull/5) - *Status: PENDING REVIEW*
-- **Repo: unfetter_proxy**: [REFACTOR] Consolidate Imports in tests/test_proxy.py. (Ref: https://github.com/HOLYKEYZ/unfetter_proxy/pull/8) - *Status: PENDING REVIEW*
+- **Repo: model-unfetter**: [DX] Redirect ProgressBar Output to sys.stderr. (Ref: https://github.com/HOLYKEYZ/model-unfetter/pull/5) - *Status: MERGED - Joseph approved! Comment: '@gemini-code-assist , good?'*
+- **Repo: unfetter_proxy**: [REFACTOR] Consolidate Imports in tests/test_proxy.py. (Ref: https://github.com/HOLYKEYZ/unfetter_proxy/pull/8) - *Status: MERGED - Joseph approved! Comment: '@gemini-code-assist , good?'*
