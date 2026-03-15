@@ -41,7 +41,7 @@ def run_cron():
         try:
             bot_repo_name = os.environ.get('BOT_REPO_NAME', 'HOLYKEYZ/mayo')
             bot_repo = gh.get_repo(bot_repo_name)
-            mem_file = bot_repo.get_contents("api/global_memory.md")
+            mem_file = bot_repo.get_contents("data/global_memory.md")
             mem_content = mem_file.decoded_content.decode('utf-8')
             
             import re as re_mod
@@ -58,8 +58,8 @@ def run_cron():
                     if issue.state == 'closed':
                         print(f"DEBUG: Issue {issue_url} is closed. Marking as resolved in memory.")
                         mem_content = mem_content.replace(f"(Ref: {issue_url}) - *Status: AWAITING JOSEPH'S INPUT*", f"(Ref: {issue_url}) - *Status: RESOLVED (Closed)*")
-                        bot_repo.update_file("api/global_memory.md", f"chore(memory): mark closed issue as resolved", mem_content, mem_file.sha)
-                        mem_file = bot_repo.get_contents("api/global_memory.md") # refresh sha
+                        bot_repo.update_file("data/global_memory.md", f"chore(memory): mark closed issue as resolved", mem_content, mem_file.sha)
+                        mem_file = bot_repo.get_contents("data/global_memory.md") # refresh sha
                         continue
                     
                     # check if the repo owner (or i) replied with instructions/approval
@@ -234,8 +234,8 @@ def run_cron():
             else:
                 new_mem = memory_text + f'\n<!-- {phase_key}={ts_now} -->'
             try:
-                mem_file = bot_repo_obj.get_contents("api/global_memory.md")
-                bot_repo_obj.update_file("api/global_memory.md", f"chore(timing): update {phase_key}", new_mem, mem_file.sha)
+                mem_file = bot_repo_obj.get_contents("data/global_memory.md")
+                bot_repo_obj.update_file("data/global_memory.md", f"chore(timing): update {phase_key}", new_mem, mem_file.sha)
             except Exception as e:
                 print(f"DEBUG: Failed to update {phase_key} timestamp: {e}")
         
@@ -243,7 +243,7 @@ def run_cron():
         bot_repo_name = os.environ.get('BOT_REPO_NAME', 'HOLYKEYZ/mayo')
         try:
             bot_repo = gh.get_repo(bot_repo_name)
-            mem_file_obj = bot_repo.get_contents("api/global_memory.md")
+            mem_file_obj = bot_repo.get_contents("data/global_memory.md")
             current_memory = mem_file_obj.decoded_content.decode('utf-8')
         except:
             current_memory = ""
@@ -501,14 +501,14 @@ Write a helpful, concise reply. Be friendly and technical. If it's a question, a
         try:
             bot_repo = gh.get_repo(bot_repo_name)
             print(f"DEBUG: Successfully accessed bot repo: {bot_repo.full_name}")
-            memory_file_obj = bot_repo.get_contents("api/global_memory.md")
+            memory_file_obj = bot_repo.get_contents("data/global_memory.md")
             global_memory = memory_file_obj.decoded_content.decode('utf-8')
             print(f"DEBUG: Global memory fetched (len: {len(global_memory)})")
         except Exception as e:
             print(f"DEBUG: PyGithub failed to fetch global memory: {e}")
             # Fallback: try direct REST API
             try:
-                mem_url = f"https://api.github.com/repos/{bot_repo_name}/contents/api/global_memory.md"
+                mem_url = f"https://api.github.com/repos/{bot_repo_name}/contents/data/global_memory.md"
                 mem_resp = requests.get(mem_url, headers=headers)
                 print(f"DEBUG: REST API fallback status: {mem_resp.status_code}")
                 if mem_resp.status_code == 200:
@@ -637,7 +637,7 @@ Write a helpful, concise reply. Be friendly and technical. If it's a question, a
         # === PHASE 1: SCANNER (Gemini A) ===
         print(f"DEBUG: Phase 1 — Scanner analyzing {target_path_display}")
         try:
-            scanner_path = os.path.join(os.path.dirname(__file__), 'api', 'scanner_prompt.txt')
+            scanner_path = os.path.join(os.path.dirname(__file__), 'prompts', 'scanner_prompt.txt')
             with open(scanner_path, 'r') as f:
                 scanner_template = f.read()
             
@@ -684,10 +684,10 @@ Write a helpful, concise reply. Be friendly and technical. If it's a question, a
                 # Save to memory
                 try:
                     bot_repo = gh.get_repo(os.environ.get('BOT_REPO_NAME', 'HOLYKEYZ/mayo'))
-                    mem_file = bot_repo.get_contents("api/global_memory.md")
+                    mem_file = bot_repo.get_contents("data/global_memory.md")
                     old_mem = mem_file.decoded_content.decode('utf-8')
                     note = f"\n- **Repo: {target_repo.name}**: Opened issue — {issue_title}. (Ref: {issue.html_url}) - *Status: AWAITING JOSEPH'S INPUT*"
-                    bot_repo.update_file("api/global_memory.md", f"feat(memory): scanner opened issue on {target_repo.name}", old_mem + note, mem_file.sha)
+                    bot_repo.update_file("data/global_memory.md", f"feat(memory): scanner opened issue on {target_repo.name}", old_mem + note, mem_file.sha)
                 except Exception as e:
                     print(f"DEBUG: Failed to save issue to memory: {e}")
             except Exception as e:
@@ -708,7 +708,7 @@ Write a helpful, concise reply. Be friendly and technical. If it's a question, a
             
             # Load executor prompt
             try:
-                executor_path = os.path.join(os.path.dirname(__file__), 'api', 'executor_prompt.txt')
+                executor_path = os.path.join(os.path.dirname(__file__), 'prompts', 'executor_prompt.txt')
                 with open(executor_path, 'r') as f:
                     executor_template = f.read()
                 
@@ -782,7 +782,7 @@ Write a helpful, concise reply. Be friendly and technical. If it's a question, a
                     diff_preview += f"\n--- {fpath}: NO CHANGES (search block not found or blocked by safety guard)\n"
             
             try:
-                reviewer_path = os.path.join(os.path.dirname(__file__), 'api', 'reviewer_prompt.txt')
+                reviewer_path = os.path.join(os.path.dirname(__file__), 'prompts', 'reviewer_prompt.txt')
                 with open(reviewer_path, 'r') as f:
                     reviewer_template = f.read()
                 

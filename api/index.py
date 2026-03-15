@@ -734,7 +734,7 @@ def audit_pending_reviews(gh):
 
         if updated_memory != memory:
             bot_repo.update_file(
-                "api/global_memory.md",
+                "data/global_memory.md",
                 "feat(memory): audit pending reviews and decay memory",
                 updated_memory,
                 memory_file.sha
@@ -747,7 +747,7 @@ def update_ai_communication_log(gh, ts, scanner_summary, executor_proposal, revi
     """Append a cycle entry to ai_communication.md and truncate to last 5 cycles."""
     try:
         bot_repo = gh.get_repo(os.environ.get('BOT_REPO_NAME', 'HOLYKEYZ/mayo'))
-        comm_file = bot_repo.get_contents("api/ai_communication.md")
+        comm_file = bot_repo.get_contents("data/ai_communication.md")
         old_log = comm_file.decoded_content.decode('utf-8')
         
         entry = (
@@ -765,7 +765,7 @@ def update_ai_communication_log(gh, ts, scanner_summary, executor_proposal, revi
             new_log = cycles[0] + '## Cycle '.join(cycles[-5:])
         
         bot_repo.update_file(
-            "api/ai_communication.md",
+            "data/ai_communication.md",
             f"feat(comms): log cycle {ts}",
             new_log,
             comm_file.sha
@@ -791,12 +791,12 @@ def get_status():
         bot_repo = gh.get_repo(os.environ.get('BOT_REPO_NAME', 'HOLYKEYZ/mayo'))
         
         # Get memory length
-        mem_file = bot_repo.get_contents("api/global_memory.md")
+        mem_file = bot_repo.get_contents("data/global_memory.md")
         mem_content = mem_file.decoded_content.decode('utf-8')
         mem_lines = len(mem_content.split('\n'))
         
         # Get comms length
-        comms_file = bot_repo.get_contents("api/ai_communication.md")
+        comms_file = bot_repo.get_contents("data/ai_communication.md")
         comms_content = comms_file.decoded_content.decode('utf-8')
         cycles = len(comms_content.split('## Cycle ')) - 1
         
