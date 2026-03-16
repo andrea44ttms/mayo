@@ -109,3 +109,4 @@ mayo , fix it!" — Mayo acknowledged and responded.
 - **REJECTED by Reviewer**: Executor's search block for `sysinfo.c` failed to match due to incorrect context, leading to a destructive and logically flawed change. Also, Scanner's initial diagnosis of a resource leak was incorrect.
 - **Repo: mayo**: [DX] Enhance JSON Extraction Test in test_json.py. (Ref: https://github.com/HOLYKEYZ/mayo/pull/7) - *Status: APPROVED - Joseph liked this!*
 - **REJECTED by Reviewer**: Executor's search block for `sysinfo.c` failed to match due to `printf` string difference and incorrect context, leading to destructive deletion of existing declarations and duplicate edits. Emphasize exact match and non-destructive changes.
+- **REJECTED by Reviewer**: Executor's search block was truncated and contained a placeholder, leading to a mismatch. Emphasize exact match including all characters and whitespace.
