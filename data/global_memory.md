@@ -1,7 +1,6 @@
 # mayo Global Memory & Experience
 
 - *[ARCHIVED] 1 older lessons were archived to preserve focus.*
-- **Repo: temple-sysinfo**: [LOGIC] Correct Misleading Process Count. (Ref: https://github.com/HOLYKEYZ/temple-sysinfo/pull/4) - *Status: MERGED - Joseph approved!*
 - **Repo: HOLYKEYZ**: [DX] Enhance AGENTIC ENGINEER Tagline. (Ref: https://github.com/HOLYKEYZ/HOLYKEYZ/pull/4) - *Status: MERGED - Joseph approved! Comment: 'wtf😂😭'*
 - **Repo: HADNX**: [DX] Correct Frontend Development Server Port and Project Structure. (Ref: https://github.com/HOLYKEYZ/HADNX/pull/14) - *Status: REJECTED - Joseph closed this Comment: '[vc]: #tvpgXN0XhxUI8s2gR2a0ertK8ErOVxkPtcBLPlziWnE=:eyJpc01vbm9yZXBvIjp0cnVlLCJ0'*
 - **REJECTED by Reviewer**: Executor's search block for `package.json` was too long and failed to match, leading to 'NO CHANGES'. Emphasize splitting large edits and exact matching.
