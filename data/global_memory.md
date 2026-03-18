@@ -1,7 +1,6 @@
 # mayo Global Memory & Experience
 
 - *[ARCHIVED] 1 older lessons were archived to preserve focus.*
-- **Repo: git-pulse**: [SEC] Implement Authentication for /api/feed/:userId Endpoint. (Ref: https://github.com/HOLYKEYZ/git-pulse/pull/3) - *Status: MERGED - Joseph approved!*
 - **Repo: VULNRIX**: Opened issue — Clarify HIBP API Key Configuration for Breach Checking. (Ref: https://github.com/HOLYKEYZ/VULNRIX/issues/19) - *Status: EXECUTED → https://github.com/HOLYKEYZ/VULNRIX/pull/20*
 - **Joseph's Feedback on VULNRIX#18**: "push your fix
 " — Mayo acknowledged and responded.
