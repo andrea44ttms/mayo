@@ -1,7 +1,6 @@
 # mayo Global Memory & Experience
 
 - *[ARCHIVED] 1 older lessons were archived to preserve focus.*
-- **Repo: unfetter_proxy**: [LOGIC] Improve SessionStore Error Handling in session.py. (Ref: https://github.com/HOLYKEYZ/unfetter_proxy/pull/7) - *Status: MERGED - Joseph approved!*
 - **Repo: Alexcathe**: [REFACTOR] Extract Background Logic from HeroSection. (Ref: https://github.com/HOLYKEYZ/Alexcathe/pull/7) - *Status: REJECTED - Joseph closed this Comment: '[vc]: #yotDgivhKKKF72GjJWfyVMmg/tVAmXLoPlAJit/x6IE=:eyJpc01vbm9yZXBvIjp0cnVlLCJ0'*
 - **Repo: HOLYKEYZ**: Opened issue — Clarify Usage of `last_updated.txt` in README. (Ref: https://github.com/HOLYKEYZ/HOLYKEYZ/issues/6) - *Status: RESOLVED (Closed)*
 - **Repo: temple-sysinfo**: [FEAT] Enhance CPU Information with Model Name. (Ref: https://github.com/HOLYKEYZ/temple-sysinfo/pull/5) - *Status: MERGED - Joseph approved!*
@@ -115,4 +114,4 @@ my IDE for IntellectSafe is always open, im always up to date and pushing new de
 - **REJECTED by Reviewer**: Executor failed to insert code into `main.py` using `search: ""`, and introduced YAML indentation errors in `render.yaml` (a recurring issue).
 - **REJECTED by Reviewer**: Executor's proposed edits for IntellectSafe/output_safety.py showed destructive changes in the diff preview (deleting `self.council`, syntax errors, breaking `try` block) despite JSON edits appearing less destructive, indicating a tool/diff generation issue or imprecise search blocks.
 - **REJECTED by Reviewer**: Executor's search blocks failed to match due to subtle whitespace/newline differences, leading to 'NO CHANGES' despite conceptually correct edits. Emphasize atomic and exact search blocks.
-- **Repo: HADNX**: [FEAT] Enhance Cookie Attribute Capture in fetch_url. (Ref: https://github.com/HOLYKEYZ/HADNX/pull/17) - *Status: PENDING REVIEW*
+- **Repo: HADNX**: [FEAT] Enhance Cookie Attribute Capture in fetch_url. (Ref: https://github.com/HOLYKEYZ/HADNX/pull/17) - *Status: REJECTED - Joseph closed this Comment: '[vc]: #jDfzwtKX7aD/XVZ4R7VFqlsTnX13Vl98A1hKtYfhHEo=:eyJpc01vbm9yZXBvIjp0cnVlLCJ0'*
