@@ -3389,3 +3389,80 @@ The most valuable improvement is to **extract the `LANGUAGE_COLORS` object from 
 **Reviewer**: REJECTED x2: The new file `apps/web/src/lib/language-colors.ts` was not created, as indicated by the diff preview. This is a critical issue, as `apps/web/src/components/PinnedRepos.tsx` will now try to import from a non-existent file, causing a build failure. Please ensure that the first edit successfully creates the `apps/web/src/lib/language-colors.ts` file with the `LANGUAGE_COLORS` export before attempting to modify `PinnedRepos.tsx`.
 
 ---
+
+## Cycle 1773925881
+**Scanner**: **Step 1: Codebase Understanding**
+
+This repository, GitPulse, is a social platform for developers, designed to integrate with the GitHub ecosystem. It enables users to share project updates and releases, engage in discussions, and follow other developers, presented in a feed format with a GitHub-inspired dark theme.
+
+The target file `packages/ui/src/lib/utils.ts` provides a utility function `cn` for combining and merging Tailwind CSS classes, a common pattern for managing dynamic styling in React/Next.js applications. This file is part of a shared UI package within the monorepo. The file `apps/web/src/app/api/users/[username]/follow/route.ts` implements an API endpoint responsible for handling user follow and unfollow actions. It manages authentication, interacts with a PostgreSQL database via Prisma to store follow relationships, and synchronizes these actions with the GitHub API. It also creates notifications for new followers. The `pnpm-workspace.yaml` file defines the monorepo structure, specifying that `apps/*` and `packages/*` directories contain workspace packages, allowing pnpm to manage dependencies across them.
+
+The codebase utilizes a monorepo structure with pnpm, Next.js 15 (App Router), TypeScript for type safety, Tailwind CSS for styling, Prisma as the ORM for database interactions with Neon (PostgreSQL), and NextAuth v5 for GitHub OAuth authentication. It follows a RESTful API design for its backend routes and employs asynchronous programming patterns with `async/await` and `Promise.all`.
+
+**Step 2: Deep Analysis**
+
+*   **Security**:
+    *   The `follow/route.ts` endpoint relies on Next.js routing and Prisma for handling `targetUsername`. While Prisma generally prevents SQL injection, explicit input validation (e.g., character set, length checks) for `targetUsername` before its use in Prisma queries and GitHub API calls is not present. This could lead to unexpected behavior with malformed usernames, though not necessarily a direct injection vulnerability.
+    *   No hardcoded secrets were found. Authentication is handled by NextAuth, which appears robust.
+    *   The API route lacks rate limiting, which could expose it to abuse (e.g., spamming follow/unfollow requests, potentially hitting GitHub API rate limits).
+
+*   **Logic**:
+    *   In `follow/route.ts`, the `params` argument in the `POST` function is typed as `Promise<{ username: string }>`, and then `await params` is used. Next.js App Router typically passes `params` as a plain object, not a Promise. This suggests a potential type error or misunderstanding of the Next.js API, leading to a redundant `await` operation.
+    *   There's a potential race condition in `follow/route.ts` if two concurrent requests attempt to follow/unfollow the same user. While database unique constraints would prevent duplicate follow entries, the application logic might not gracefully handle the second request's failure, or the GitHub sync might proceed even if the database operation fails.
+    *   The GitHub API sync operations are "best-effort" (wrapped in `.catch`). This means the GitPulse database state might diverge from GitHub's if the sync fails, and the user is not informed of this failure. There's no retry mechanism.
+    *   Notifications are only created for follow actions, not unfollows, which is a design choice but noted.
+
+*   **Performance**:
+    *   The `await params` in `follow/route.ts` is a minor, unnecessary operation if `params` is a plain object, adding a negligible overhead.
+    *   Two separate `prisma.user.findUnique` calls are made for `currentUser` and `targetUser`. For just two users, this is unlikely to be a significant performance bottleneck, but in scenarios involving more related data, N+1 query patterns could emerge.
+
+*   **Architecture**:
+    *   The success responses from `follow/route.ts` are slightly inconsistent: one returns `{ success: true, action: "unfollowed" }` and the other `{ success: true, action: "followed", follow }`. Standardizing response structures can improve client-side predictability.
+    *   The GitHub API interaction is directly embedded within the API route handler. For larger applications, abstracting external API calls into a dedicated service could improve separation of concerns and testability.
+
+*   **Features**:
+    *   The "best-effort" GitHub sync lacks user feedback or a robust retry mechanism for failures, which could be a valuable enhancement.
+    *   The API currently doesn't expose follower/following counts, which are common social features.
+
+*   **Testing**:
+    *   No test files were provided for analysis. The `follow/route.ts` logic, involving authentication, database transactions, external API calls, and notifications, would benefit significantly from comprehensive unit and integration tests to cover various success and error paths, as well as edge cases.
+
+*   **DX (Developer Experience)**:
+    *   The `pnpm-workspace.yaml` and the `cn` utility in `packages/ui` are good examples of clear monorepo structure and reusable utilities, enhancing DX.
+    *   Adding comments to explain the `export const dynamic = "force-dynamic";` line in `follow/route.ts` could clarify its purpose for future maintainers.
+
+*   **Consistency**:
+    *   The type annotation for `params` in `follow/route.ts` is inconsistent with typical Next.js App Router usage.
+    *   Minor inconsistency in API success response structures.
+
+*   **Dead Code**:
+    *   No obvious dead code was identified in the provided snippets.
+
+**Step 3: Pick ONE Improvement**
+
+The most valuable improvement is to correct the type definition and remove the redundant `await` for the `params` object in `apps/web/src/app/api/users/[username]/follow/route.ts`. This addresses a direct logical and type inconsistency, aligning the code with standard Next.js API patterns, improving clarity, and removing an unnecessary operation. This falls under the highest priority category of "Bugs, security flaws, and broken logic" due to the incorrect type usage.
+
+**Step 4: Write the Executor's Plan**
+
+**WHAT** to change:
+The type annotation for the `params` argument in the `POST` function within `apps/web/src/app/api/users/[username]/follow/route.ts` needs to be updated. It should reflect that `params` is a plain object, not a Promise. Consequently, the `await` keyword used when destructuring `params` should be removed, as it is redundant for a non-Promise object.
+
+**WHERE** in the file(s):
+In the file `apps/web/src/app/api/users/[username]/follow/route.ts`:
+1.  Locate the `POST` asynchronous function definition.
+2.  Locate the line inside the `POST` function where `targetUsername` is destructured from `params`.
+
+**WHY** this matters:
+Next.js App Router's `params` object, which is passed to API route handlers, is a standard JavaScript object containing route parameters. It is not a Promise. The current type annotation `Promise<{ username: string }>` is incorrect and misleading, potentially causing confusion for developers. The use of `await params` is therefore unnecessary and redundant, even though JavaScript might resolve it immediately to the object. Correcting this improves the accuracy of the type definitions, removes an unneeded asynchronous operation, and ensures the code adheres to standard Next.js API route conventions, enhancing code clarity and maintainability.
+
+**HOW** to do it:
+1.  Find the `POST` function signature in `apps/web/src/app/api/users/[username]/follow/route.ts`.
+2.  Modify the type annotation for the `params` argument from `Promise<{ username: string }>` to `{ username: string }`.
+3.  Locate the line within the `POST` function that reads `const { username: targetUsername } = await params;`.
+4.  Remove the `await` keyword from this line, so it becomes `const { username: targetUsername } = params;`.
+
+**Executor**: {"title": "[LOGIC] Correct Next.js App Router `params` Type and Remove Redundant `await`", "body": "### Problem / Gap\nThe `POST` function in `apps/web/src/app/api/users/[username]/follow/route.ts` incorrectly types the `params` argument as a `Promise<{ username: string }>`. Consequently, an unnecessary `await` keyword is used when destructuring `params` to extract `targetUsername`.\n\nNext.js App Router passes `params` as a plain object, not a Promise. This inconsistency leads to misleading type definitions and introduces a redundant asynchronous operation, even if JavaScript resolves it immediately.\n\n### Solution & Insight\nThe solution involves two surgical edits:\n1. Update the type annotation for the `params` argument in the `POST` function signature from `Promise<{ username: string }>` to `{ username: string }`.\n2. Remove the redundant `await` keyword from the line where `targetUsername` is destructured from `params`.\n\nThis aligns the code with standard Next.js API route conventions, ensuring `params` is correctly typed as a plain object and eliminating an unnecessary `await` operation. The indentation for the modified line has been carefully preserved.\n\n### Impact\n- **Improved Code Clarity**: The type definitions now accurately reflect the nature of the `params` object, making the code easier to understand and maintain for developers.\n- **Enhanced Consistency**: The API route handler now adheres to standard Next.js App Router patterns, reducing potential confusion.\n- **Minor Performance Gain**: Removal of the redundant `await` operation, while negligible for a single call, contributes to a cleaner and slightly more efficient execution flow.\n- **Reduced Potential for Errors**: Correcting the type prevents potential issues that could arise from treating a synchronous object as an asynchronous one.", "branch_name": "bot/fix-follow-route-params", "edits": [{"file": "apps/web/src/app/api/users/[username]/follow/route.ts", "search": "export async function POST(req: Request, { params }: { params: Promise<{ username: string }> }) {", "replace": "export async function POST(req: Request, { params }: { params: { username: string } }) {"}, {"file": "apps/web/src/app/api/users/[username]/follow/route.ts", "search": "        const { username: targetUsername } = await params;", "replace": "        const { username: targetUsername } = params;"}]}
+
+**Reviewer**: APPROVE: The Executor's proposed edits correctly address the type inconsistency and redundant `await` for the `params` object in the Next.js API route. The changes align perfectly with standard Next.js App Router behavior, improving type accuracy and code clarity without introducing any regressions or destructive changes. Both search blocks are exact matches, and the resulting code is functional and production-ready.
+
+---
