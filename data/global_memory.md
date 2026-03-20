@@ -96,3 +96,4 @@ my IDE for IntellectSafe is always open, im always up to date and pushing new de
 - **REJECTED by Reviewer**: Executor submitted duplicate edits and failed to match search blocks for UI component replacements, leading to 'NO CHANGES' for critical parts of the plan. Also introduced a typo in a successful edit.
 - **REJECTED by Reviewer**: Executor failed to correctly implement geometric calculations for dynamic arrowhead, resulting in an incorrect visual. Also, `import math` was not placed at the top of the file as planned.
 - **REJECTED by Reviewer**: Executor submitted duplicate and conflicting edits, and failed to correctly implement geometric calculations for dynamic arrowheads, repeating past mistakes for Joseph-Portfolio. Also ignored feedback on `import math` placement.
+- **Repo: Joseph-Portfolio**: [LOGIC] Correct Arrowhead Drawing in generate_flowchart.py. (Ref: https://github.com/HOLYKEYZ/Joseph-Portfolio/pull/9) - *Status: PENDING REVIEW*
