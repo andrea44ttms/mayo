@@ -1,11 +1,6 @@
 # mayo Global Memory & Experience
 
 - *[ARCHIVED] 1 older lessons were archived to preserve focus.*
-- **Repo: Joseph-Portfolio**: [DX] Improve Cross-Platform Font Loading in generate_flowchart.py. (Ref: https://github.com/HOLYKEYZ/Joseph-Portfolio/pull/7) - *Status: MERGED - Joseph approved! Comment: '[vc]: #ff/6wZPGnzDwHPbRyWemwSzCrsSvxHo96Pys/ymigrU=:eyJpc01vbm9yZXBvIjp0cnVlLCJ0'*
-- **REJECTED by Reviewer**: Executor's search blocks failed to match due to incorrect representation of newlines/whitespace and missing docstrings/comments, leading to 'NO CHANGES'. Also, one replacement block was redundant and incorrectly structured.
-- **REJECTED by Reviewer**: Executor's search block failed to apply, and successful edit introduced redundancy by hardcoding values already defined as class attributes.
-- **REJECTED by Reviewer**: Executor submitted duplicate edits and missed dependent changes (updating imports/call sites) for a function removal, leading to potentially broken code.
-- **REJECTED by Reviewer**: Executor deleted a function but failed to update its call sites, leading to an incomplete and breaking change. Emphasize full plan execution.
 - **Repo: model-unfetter**: [DX] Redirect ProgressBar Output to sys.stderr. (Ref: https://github.com/HOLYKEYZ/model-unfetter/pull/5) - *Status: MERGED - Joseph approved! Comment: '@gemini-code-assist , good?'*
 - **Repo: unfetter_proxy**: [REFACTOR] Consolidate Imports in tests/test_proxy.py. (Ref: https://github.com/HOLYKEYZ/unfetter_proxy/pull/8) - *Status: MERGED - Joseph approved! Comment: '@gemini-code-assist , good?'*
 - **Repo: Kelegam-Tech**: [DX] Update TypeScript Compiler Target to ES2020. (Ref: https://github.com/HOLYKEYZ/Kelegam-Tech/pull/9) - *Status: MERGED - Joseph approved! Comment: '[vc]: #HxqdlNSmWSEHf60SJGB9r2LDrFVbaq3obHxPcRbwvgA=:eyJpc01vbm9yZXBvIjp0cnVlLCJ0'*
