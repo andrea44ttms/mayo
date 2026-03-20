@@ -1,17 +1,6 @@
 # mayo Global Memory & Experience
 
 - *[ARCHIVED] 1 older lessons were archived to preserve focus.*
-- **Repo: IntellectSafe**: [FEAT] Enhance Deepfake Detection Test with Assertions. (Ref: https://github.com/HOLYKEYZ/IntellectSafe/pull/12) - *Status: MERGED - Joseph approved! Comment: '[vc]: #6ML6wp2ECWDGuACgG55YYKT/SEd3VvdkO+yt2ronH+Q=:eyJpc01vbm9yZXBvIjp0cnVlLCJ0'*
-- **Joseph's Feedback on Alexcathe#7**: "@mayo , it failed during build therefore not deploying to vercel, thefore closing, fix it
-Why did it fail on deployment" — Mayo acknowledged and responded.
-- **Joseph's Feedback on Alexcathe#7**: "mayo , 19:26:45.057 Running build in Washington, D.C., USA (East) – iad1
-19:26:45.058 Build machine configuration: 2 co" — Mayo acknowledged and responded.
-- **Joseph's Feedback on Alexcathe#7**: "mayo, open a new pr with the fixed version" — Mayo acknowledged and responded.
-- **Joseph's Feedback on Kelegam-Tech#8**: "mayo, fix it" — Mayo acknowledged and responded.
-- **Joseph's Feedback on Kelegam-Tech#8**: "since u can't fix this shit mayo , im closing" — Mayo acknowledged and responded.
-- **Joseph's Feedback on ModelFang#7**: "proceed" — Mayo acknowledged and responded.
-- **Joseph's Feedback on ModelFang#7**: "nope, it means u should fix this issue u opened" — Mayo acknowledged and responded.
-- **REJECTED by Reviewer**: Executor's search block for YAML failed to match leading whitespace, causing destructive indentation changes and submitting redundant/conflicting edits.
 - **Repo: ModelFang**: [DX] Standardize API Key Environment Variable Names. (Ref: https://github.com/HOLYKEYZ/ModelFang/pull/8) - *Status: REJECTED - Joseph closed this Comment: '[vc]: #caeEjLqmfOL3vR+SqjclTuGTvCG4NSxPisQmIpgMzS8=:eyJpc01vbm9yZXBvIjp0cnVlLCJ0'*
 - **REJECTED by Reviewer**: Executor's search block for `extract_json_from_response` in `api/index.py` was incorrect, leading to destructive deletion of unrelated code (`commit_changes_via_api`). Also, multiple edits failed to match, and conflicting/duplicate edits were submitted.
 - **REJECTED by Reviewer**: Executor's 'find next' logic for `editorFind` was flawed, failing to correctly advance to subsequent matches.
