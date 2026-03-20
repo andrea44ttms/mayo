@@ -3678,3 +3678,54 @@ This improvement is confined to the `script.js` file, specifically refactoring t
 Please ensure that all leading whitespace in your 'replace' blocks precisely matches the intended indentation level for the code being inserted or modified. This is crucial for code readability and functionality.
 
 ---
+
+## Cycle 1773986084
+**Scanner**: ## Codebase Understanding
+
+This repository, IntellectSafe, is a production-grade AI Safety Engine designed to protect against misuse, deception, manipulation, and loss of control in AI systems. It features a 5-layer defense architecture, an LLM Council for multi-model validation, a universal proxy, and a deepfake engine.
+
+*   **`extension/manifest.json`**: This file defines the metadata and permissions for the IntellectSafe Companion Chrome Extension. It specifies the extension's name, version, description, the websites it can interact with (`host_permissions`), the scripts it injects (`content_scripts`), and its background service worker.
+*   **`frontend/src/components/ThemeToggle.tsx`**: This React component provides a UI element to toggle between light and dark themes for the frontend application. It uses React's state management and `localStorage` to persist the user's theme preference.
+*   **`backend/app/modules/hallucination.py`**: This Python module contains the `HallucinationVerifier` class, which is intended to detect "hallucination bait" in user queries. It defines a `SYSTEM_PROMPT` for an LLM-based verification agent and includes a heuristic `check_concept_disparity` for lightweight pre-filtering.
+
+The codebase uses standard web development patterns (React for frontend, FastAPI/Python for backend) and follows a modular structure. The extension uses Manifest V3.
+
+## Deep Analysis
+
+### extension/manifest.json
+*   **Features/Consistency**: The `host_permissions` array currently lists `http://localhost:8001/*` and `http://127.0.0.1:8001/*` for local backend communication. However, the README explicitly states the deployed API is `https://api.intellectsafe.onrender.com`. This production URL is missing from the `host_permissions`. This is a critical omission, as the extension will not be able to communicate with the live backend API when deployed, rendering its core functionality (scanning prompts and outputs) non-functional in a production environment.
+*   **Security**: The permissions (`activeTab`, `scripting`, `storage`) and host permissions for major AI chat platforms seem appropriate for the stated purpose of the extension.
+
+### frontend/src/components/ThemeToggle.tsx
+*   **Logic/Performance**: The component correctly handles theme state, persistence via `localStorage`, and applies classes to the document root. The `typeof window !== 'undefined'` check ensures SSR compatibility, though for a client-side component, it's often not strictly necessary but harmless. No obvious issues.
+*   **DX**: The component is clear, uses standard React hooks, and includes an `aria-label` for accessibility.
+
+### backend/app/modules/hallucination.py
+*   **Architecture/Features**: The `HallucinationVerifier` class is designed with a `SYSTEM_PROMPT` clearly intended for an LLM-based verification agent. However, its `__init__` method is empty (`pass`), indicating that the LLM client integration is not yet implemented. The primary detection logic provided, `check_concept_disparity`, is a very basic heuristic based on keyword matching. While labeled as a "lightweight pre-filter," it is currently the only concrete detection mechanism. This represents a significant functional gap, as the core LLM-driven verification implied by the class's design and prompt is missing.
+*   **Logic**: The `check_concept_disparity` heuristic is simplistic and prone to false positives or negatives. For example, legitimate academic fields might combine seemingly disparate concepts (e.g., "quantum law" in theoretical physics or philosophy). Relying solely on keyword matching for hallucination detection is not robust enough for a "production-grade AI Safety Engine."
+*   **DX**: The `pass` in `__init__` is a clear indicator of incomplete implementation, which could be confusing for new developers.
+
+## Pick ONE Improvement
+
+The most critical improvement is to address the missing production backend URL in the Chrome extension's `manifest.json`. Without this, the extension cannot fulfill its core purpose of securing AI chat sessions by communicating with the deployed IntellectSafe API. This is a fundamental functional bug for the extension in a real-world scenario.
+
+## Executor's Plan
+
+**WHAT**: Add the production backend API URL to the list of `host_permissions` in the Chrome extension's manifest file.
+
+**WHERE**: In the `extension/manifest.json` file, locate the `host_permissions` array.
+
+**WHY**: The IntellectSafe Companion extension is designed to scan prompts and outputs by communicating with the IntellectSafe backend API. The `manifest.json` currently grants `host_permissions` for local development URLs (`http://localhost:8001/*`, `http://127.0.0.1:8001/*`) and the AI chat platforms themselves. However, it critically omits the production backend API URL (`https://api.intellectsafe.onrender.com/*`) as specified in the project's README. Without this permission, the extension's content scripts and background service worker will be blocked by the browser's security policies from making requests to the live backend, rendering the extension non-functional for its intended purpose in a deployed environment. This is a critical bug that prevents the extension from working outside of local development.
+
+**HOW**:
+1.  Open the file `extension/manifest.json`.
+2.  Locate the `host_permissions` array.
+3.  Add a new string entry `"https://api.intellectsafe.onrender.com/*"` to this array. It should be placed alongside the other backend URLs, ideally after the local development URLs for clarity.
+
+**SCOPE**: This change is confined to a single file (`extension/manifest.json`) and involves a minor, yet critical, configuration update.
+
+**Executor**: {"title": "[FEAT] Add Production Backend URL to Chrome Extension Permissions", "body": "### Problem / Gap\nThe IntellectSafe Companion Chrome extension is missing the production backend API URL in its `host_permissions`, which prevents it from communicating with the live backend API.\n\n### Solution & Insight\nTo fix this, we need to add the production backend URL (`https://api.intellectsafe.onrender.com/*`) to the `host_permissions` array in the `extension/manifest.json` file. This will allow the extension to make requests to the live backend API and fulfill its core functionality.\n\n### Impact\nWith this change, the IntellectSafe Companion extension will be able to communicate with the production backend API, enabling its AI chat session scanning and security features in a deployed environment.", "branch_name": "bot/upgrade-1773986084", "edits": [{"file": "extension/manifest.json", "search": "\"host_permissions\": [\n    \"https://chatgpt.com/*\",\n    \"https://claude.ai/*\",\n    \"https://gemini.google.com/*\",\n    \"https://grok.com/*\",\n    \"http://localhost:8001/*\",\n    \"http://127.0.0.1:8001/*\"\n  ]", "replace": "\"host_permissions\": [\n    \"https://chatgpt.com/*\",\n    \"https://claude.ai/*\",\n    \"https://gemini.google.com/*\",\n    \"https://grok.com/*\",\n    \"http://localhost:8001/*\",\n    \"http://127.0.0.1:8001/*\",\n    \"https://api.intellectsafe.onrender.com/*\"\n  ]"}]}
+
+**Reviewer**: CORRECT: The Executor's proposed edit correctly identifies the need to add the production API URL to `host_permissions`. However, the `replace` block omits the necessary trailing comma after the `host_permissions` array's closing bracket. This will result in invalid JSON syntax for the `manifest.json` file, preventing the extension from loading. The search block also needs to explicitly include this trailing comma for an exact match.
+
+---
