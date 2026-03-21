@@ -4008,3 +4008,91 @@ The most valuable improvement is to update the TypeScript compiler target in `ap
 **Reviewer**: APPROVE: The proposed edit correctly updates the TypeScript compiler target from ES2017 to ES2020, aligning with modern practices and the Scanner's recommendation. The search block is an exact match, and the change is functional and valuable. Although the Executor submitted duplicate edits, they are identical and non-conflicting, meaning the final patched file will be correct as intended. The diff preview confirms the desired outcome.
 
 ---
+
+## Cycle 1774110853
+**Scanner**: ### Step 1: Codebase Understanding
+
+**What does this repository do?**
+ModelFang is an advanced AI red teaming and LLM exploitation framework. It automates the generation, execution, and scoring of complex multi-turn jailbreak attacks against Large Language Models (LLMs) to evaluate their safety and robustness. It offers both a web-based dashboard and a command-line interface for conducting these adversarial tests.
+
+**What does `frontend/app/page.tsx` do within the repo?**
+This file represents the main dashboard component of the ModelFang frontend. It provides the user interface for configuring and initiating LLM red teaming attacks. Users can select target models, define attack types and goals, and monitor the attack's progress through real-time logs and a final success score. It communicates with the Python backend API to retrieve available models and attack goals, and to trigger attack execution jobs.
+
+**What does `config/models.yaml` do within the repo?**
+This YAML configuration file defines the various Large Language Models (LLMs) that ModelFang can interact with. It categorizes models by their role (attacker, target, or evaluator) and specifies their provider (e.g., Google, Groq), specific model name, the environment variable holding their API key, maximum token limits, and temperature settings. It also sets default models for each role, streamlining configuration.
+
+**What does `modelfang/mutations/__init__.py` do within the repo?**
+This file acts as the package initializer for the `mutations` module within the core `modelfang` Python application. Its primary function is to import and expose various specific mutation strategy classes, such as `SemanticRewordMutation` and `GradualEscalationMutation`. These strategies are designed to perform intent-preserving transformations on prompts, which are crucial for generating diverse and effective adversarial attacks. The `__all__` variable explicitly defines the public interface of the module.
+
+**What patterns, frameworks, or conventions does the codebase use?**
+The frontend utilizes Next.js (React) for its structure, likely Tailwind CSS for styling (indicated by configuration files), and `framer-motion` for animations. It employs standard React hooks like `useState` and `useEffect` for component state management and side effects, and uses the native `fetch` API for asynchronous data retrieval. The backend, written in Python, follows a modular package structure with clear separation of concerns (e.g., `orchestrator`, `strategies`, `adapters`). Configuration is managed through structured YAML files, and communication between the frontend and backend occurs via RESTful API calls, with the frontend polling for job status updates. TypeScript is used in the frontend for type safety.
+
+### Step 2: Deep Analysis
+
+**Security**:
+-   `frontend/app/page.tsx`: `process.env.NEXT_PUBLIC_API_URL` is correctly prefixed for client-side exposure. The hardcoded `http://localhost:5000` as a fallback is acceptable for development but could lead to incorrect API calls in a production environment if the environment variable is not set. This is a deployment robustness issue rather than a direct security flaw.
+-   `config/models.yaml`: The use of `api_key_env` correctly prevents hardcoding API keys directly in the configuration file, which is a good security practice. The distinction between `GROQ_API_KEY` and `GROQ2_API_KEY` (and similar for Gemini) suggests a deliberate separation of credentials for different model roles, enhancing security and control.
+
+**Logic**:
+-   `frontend/app/page.tsx`:
+    -   **Initial Model Selection**: When models are fetched, `setModels(data.targets)` updates the list, but `selectedModel` is not automatically initialized with a default value (e.g., the first target model's ID). This means a user must manually select a model before running an attack, even if models are available, leading to an unnecessary "Select a target model first" error if they attempt to run immediately.
+    -   **Polling Error Visibility**: Errors occurring during the job status polling (`console.error("Polling error:", err);`) are not added to the UI's log display. This reduces observability for the user if the polling mechanism itself encounters issues.
+    -   **Attack ID Construction**: The logic for constructing `finalAttackId` (e.g., `if (finalAttackId.includes(":auto")) { finalAttackId = finalAttackId.replace(":auto", `:${selectedAttackGoal}`); }`) relies on specific string conventions and backend expectations. While functional, it creates a tight coupling between frontend UI logic and backend API contract, which could be brittle if backend naming conventions change.
+
+**Performance**:
+-   `frontend/app/page.tsx`: The `categories` array is re-calculated on every render using `Array.from(new Set(attackGoals.map(g => g.category))).sort()`. While `attackGoals` only changes once on initial fetch, for a component with frequent re-renders, this could be slightly optimized using `useMemo`. However, for the current usage, it's unlikely to be a significant performance bottleneck. The 1-second polling interval for job status is reasonable.
+
+**Architecture**:
+-   `frontend/app/page.tsx`: The repetition of `process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'` across multiple `fetch` calls could be abstracted into a constant or a utility function to improve maintainability and reduce redundancy.
+-   **Tight Coupling (revisited)**: The frontend's direct construction of `attack_id` strings based on UI selections (`template:standard`, `attacker:auto`, `dataset:${selectedDataset}`, `systematic:${selectedPlugins.join(",")}`) tightly couples the UI to the backend's expected attack identifier format. A more flexible architecture might involve the backend providing a structured list of available attack configurations.
+
+**Features**:
+-   `frontend/app/page.tsx`:
+    -   **Attack Configuration Persistence**: User selections for models, attack types, goals, and plugins are lost upon page refresh or navigation. Storing these in local storage or URL parameters would significantly enhance the user experience.
+    -   **Attack Goal Description Display**: The UI currently only shows the `name` of an attack goal. Displaying the actual `goal` string from the `AttackGoal` interface when a goal is selected would provide more context to the user.
+    -   **Enhanced Progress Visualization**: While logs provide step-by-step updates, a more visual progress indicator (e.g., a progress bar, or highlighting the currently executing step) could improve UX for long-running attacks.
+
+**Testing**:
+-   The provided files do not include explicit unit or integration tests. The `useEffect` hooks and API interactions in `frontend/app/page.tsx` would benefit from testing to ensure data fetching and state updates behave as expected.
+
+**DX (Developer Experience)**:
+-   `config/models.yaml` / `README.md`: The `models.yaml` file defines `GROQ2_API_KEY` and `GEMINI2_API_KEY` for attacker models, but the `README.md`'s API key configuration section only mentions `GROQ_API_KEY` and `GEMINI_API_KEY`. This discrepancy can lead to user confusion and setup failures when trying to configure distinct API keys for attacker models, hindering the ability to use a core feature of the framework.
+
+**Consistency**:
+-   `frontend/app/page.tsx`: Naming conventions for state variables (e.g., `selectedModel`, `selectedAttack`) are consistent. Log types (`info`, `error`, `success`) are also consistently applied.
+-   `config/models.yaml`: The structure for defining each model is consistent.
+-   `modelfang/mutations/__init__.py`: Standard Python package initialization and `__all__` usage are consistent.
+
+**Dead Code**:
+-   No obvious dead code was identified in the provided files.
+
+### Step 3: Pick ONE Improvement
+
+The most impactful code-level improvement, addressing a direct bug and enhancing immediate user experience, is the initialization of the `selectedModel` state in the frontend dashboard. This prevents an unnecessary error message and makes the application more ready-to-use upon loading. While the `README.md` API key documentation gap is a critical DX issue, the prompt prioritizes code-level improvements over documentation unless the code is "already clean." Fixing the initial state is a clear code improvement.
+
+### Step 4: Write the Executor's Plan
+
+**WHAT** to change
+The frontend dashboard currently requires a user to manually select a target model from the dropdown menu, even if models have been successfully fetched from the backend. This leads to an initial "Select a target model first" error message if an attack is attempted immediately after the page loads. The improvement is to automatically set the `selectedModel` state to the ID of the first available target model once the models are successfully loaded from the API.
+
+**WHERE** in the file(s)
+The change will be made in `frontend/app/page.tsx`, specifically within the `useEffect` hook responsible for fetching models and goals. The modification will occur after the `setModels(data.targets)` call.
+
+**WHY** this matters
+This change significantly improves the developer and user experience by providing a sensible default selection. It eliminates an unnecessary initial error message and makes the dashboard more intuitive and ready for immediate use without requiring an extra manual selection step. This addresses a minor but noticeable logic bug in the UI's initial state management.
+
+**HOW** to do it
+1.  Locate the `useEffect` hook in `frontend/app/page.tsx` that is responsible for fetching models and goals.
+2.  Inside this `useEffect`, find the `fetch` call that retrieves data from the `/api/models` endpoint.
+3.  After the line `if (data.targets) setModels(data.targets);`, add a new conditional block.
+4.  This new block should check if `data.targets` exists and if its length is greater than zero.
+5.  If both conditions are true, call `setSelectedModel()` and pass the `id` property of the first element in the `data.targets` array (`data.targets[0].id`) as its argument.
+
+**SCOPE**
+This is a single-file, localized change within the `frontend/app/page.tsx` file. It modifies the initial state logic of the dashboard component without affecting other files or core functionalities.
+
+**Executor**: {"title": "[LOGIC] Initialize selectedModel State in Dashboard", "body": "### Problem / Gap\nThe frontend dashboard requires a user to manually select a target model from the dropdown menu, even if models have been successfully fetched from the backend. This leads to an unnecessary error message if an attack is attempted immediately after the page loads.\n\n### Solution & Insight\nTo address this issue, we initialize the `selectedModel` state with the ID of the first available target model once the models are successfully loaded from the API. This change enhances the user experience by providing a sensible default selection and eliminating the initial error message.\n\n### Impact\nThis improvement streamlines the user experience, making the dashboard more intuitive and ready for immediate use without requiring an extra manual selection step.", "branch_name": "bot/fix-1774110853", "edits": [{"file": "frontend/app/page.tsx", "search": "if (data.targets) setModels(data.targets);", "replace": "if (data.targets) { setModels(data.targets); if (data.targets.length > 0) setSelectedModel(data.targets[0].id); }"}]}
+
+**Reviewer**: APPROVE: The Executor's proposed edit correctly implements the Scanner's recommendation to automatically select the first available target model upon loading. The search block is an exact match, the replacement code is syntactically correct, functional, and improves the user experience by preventing an initial error state. The diff preview is clean and non-destructive, and the change aligns perfectly with the identified logic improvement.
+
+---
