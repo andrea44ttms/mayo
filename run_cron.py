@@ -544,7 +544,12 @@ Write a helpful, concise reply. Be friendly and technical. If it's a question, a
         if not candidates:
             print("No eligible repos found")
             return
-            
+        
+        # PRIORITY: Put git-pulse first for the next month
+        PRIORITY_REPO = 'git-pulse'
+        priority_candidates = [r for r in candidates if r.get('name') == PRIORITY_REPO]
+        other_candidates = [r for r in candidates if r.get('name') != PRIORITY_REPO]
+        
         # Parse last 3 repos from memory for cooldown
         recent_repos = []
         import re as re_mod
@@ -556,23 +561,32 @@ Write a helpful, concise reply. Be friendly and technical. If it's a question, a
                     recent_repos.append(r_name)
                 if len(recent_repos) >= 3:
                     break
-                    
-        # Filter out cooldown repos
-        available = [r for r in candidates if r.get('name') not in recent_repos]
-        if not available:
-            print("DEBUG: All candidates in cooldown. Ignoring cooldown.")
-            available = candidates
-            
-        # Priority Queue: rank by oldest occurrence in memory
-        def repo_score(repo):
-            return global_memory.rfind(f"**Repo: {repo.get('name')}**")
-            
-        available.sort(key=repo_score)
         
-        # Pick randomly from the top 30% most-needing repos
-        import random
-        top_k = max(1, len(available) // 3)
-        chosen = random.choice(available[:top_k])
+        # Filter out cooldown repos
+        def not_in_cooldown(r):
+            return r.get('name') not in recent_repos
+        
+        priority_available = [r for r in priority_candidates if not_in_cooldown(r)]
+        other_available = [r for r in other_candidates if not_in_cooldown(r)]
+        
+        # If git-pulse is available (not in cooldown), pick it 100%
+        if priority_available:
+            chosen = priority_available[0]
+            print(f"DEBUG: PRIORITY REPO {PRIORITY_REPO} selected (not in cooldown)")
+        elif other_available:
+            # Pick from other available repos with priority queue
+            other_available.sort(key=lambda r: global_memory.rfind(f"**Repo: {r.get('name')}**"))
+            top_k = max(1, len(other_available) // 3)
+            import random
+            chosen = random.choice(other_available[:top_k])
+        elif candidates:
+            # All in cooldown, pick random
+            import random
+            chosen = random.choice(candidates)
+        else:
+            print("DEBUG: No candidates available")
+            return
+        
         target_repo = gh.get_repo(chosen['full_name'])
         print(f"DEBUG: Targeting repo {target_repo.full_name} (cooldown/priority applied)")
 
