@@ -46,7 +46,7 @@ def run_cron():
         # === PHASE 0.5: CHECK APPROVED ISSUES ===
         print("DEBUG: Phase 0.5 — Checking for approved issues")
         try:
-            bot_repo_name = os.environ.get('BOT_REPO_NAME', 'HOLYKEYZ/mayo')
+bot_repo_name = os.environ.get('GITHUB_REPOSITORY', 'HOLYKEYZ/mayo')
             bot_repo = gh.get_repo(bot_repo_name)
             mem_file = bot_repo.get_contents("data/global_memory.md")
             mem_content = mem_file.decoded_content.decode('utf-8')
@@ -75,9 +75,9 @@ def run_cron():
                     repo_owner_login = issue_repo.owner.login
                     
                     for comment in issue.get_comments():
-                        if comment.user.login not in ('joe-gemini-bot[bot]', 'github-actions[bot]'):
+if comment.user.login not in (get_bot_login(), 'github-actions[bot]'):
                             # Process any comment from the repo owner or Joseph as an instruction
-                            if comment.user.login == repo_owner_login or comment.user.login == 'HOLYKEYZ':
+if comment.user.login == repo_owner_login:
                                 joseph_approved = True
                                 joseph_reply = comment.body
                                 break
