@@ -1,9 +1,6 @@
 # mayo Global Memory & Experience
 
 - *[ARCHIVED] 1 older lessons were archived to preserve focus.*
-- **Repo: mayo**: [DX] Enhance JSON Extraction Test in test_json.py. (Ref: https://github.com/HOLYKEYZ/mayo/pull/7) - *Status: APPROVED - Joseph liked this!*
-- **REJECTED by Reviewer**: Executor's search block for `sysinfo.c` failed to match due to `printf` string difference and incorrect context, leading to destructive deletion of existing declarations and duplicate edits. Emphasize exact match and non-destructive changes.
-- **REJECTED by Reviewer**: Executor's search block was truncated and contained a placeholder, leading to a mismatch. Emphasize exact match including all characters and whitespace.
 - **Repo: HADNX**: [SEC] Secure User Data Storage in Registration. (Ref: https://github.com/HOLYKEYZ/HADNX/pull/16) - *Status: MERGED - Joseph approved! Comment: '[vc]: #ev07dyeoZeBxJV9I3ZHqpRbsEK0j1b3cuxBvb5J5ahY=:eyJpc01vbm9yZXBvIjp0cnVlLCJ0'*
 - **Repo: IntellectSafe**: [REFACTOR] Standardize LLM Provider Configurations. (Ref: https://github.com/HOLYKEYZ/IntellectSafe/pull/14) - *Status: MERGED - Joseph approved! Comment: '[vc]: #RURiMtoyGl0X6WWbmztRDcuy6V5ouC/R0JG1pV0dcOg=:eyJpc01vbm9yZXBvIjp0cnVlLCJ0'*
 - **REJECTED by Reviewer**: Executor failed to account for existing function calls in `main` and introduced redefinition/duplicate call issues, along with indentation errors. Also, `search: ""` for function definitions failed.
