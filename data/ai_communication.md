@@ -4464,3 +4464,76 @@ This improvement involves a targeted refactoring within the `POST` function of `
 **Reviewer**: CORRECT: The Executor's proposed edit correctly identifies the target line for optimization but introduces a `ReferenceError` because `tokenUser` is not in scope at the point of replacement. Furthermore, the underlying assumption from the Scanner's analysis that `tokenUser` already contains the full user object (including `id`) is incorrect, as it's currently fetched with `select: { username: true }`. To truly optimize and avoid a redundant DB query, `tokenUser` must be fetched with the necessary fields (or the full object) and then correctly passed via a higher-scoped variable. The corrected edits address these issues by modifying the `tokenUser` fetch, declaring `userInDb` at the correct scope, and then applying the conditional lookup.
 
 ---
+
+## Cycle 1774308989
+**Scanner**: **Step 1: Codebase Understanding**
+
+This repository, `HOLYKEYZ/git-pulse`, appears to be a web application built with Next.js, React, and TypeScript, designed to interact with and display GitHub user data. It likely serves as a platform to visualize GitHub profiles, achievements, and other related information.
+
+*   **`apps/web/test-scraper5.js`**: This file is a standalone Node.js script that uses `cheerio` and `fetch` to scrape a GitHub user's achievement page. It extracts details like achievement names, descriptions, multipliers, and badge URLs. Its purpose seems to be for testing or prototyping data extraction from GitHub.
+*   **`apps/web/tsconfig.json`**: This is the TypeScript configuration file for the `apps/web` project. It defines compiler options specific to this Next.js application, including target ECMAScript version, module resolution strategy, JSX handling, and path aliases.
+*   **`apps/web/src/components/ProfileReadme.tsx`**: This React component is responsible for rendering a GitHub user's README content. It leverages `react-markdown` with `remark-gfm` and `rehype-raw` to parse and display Markdown. It includes custom logic to proxy image URLs for CORS compatibility, handle relative image paths, and apply alignment and sizing styles to various HTML elements, with special consideration for dark-mode `<picture>` elements.
+
+The codebase uses a monorepo structure, Next.js for the web application, React and TypeScript for UI development, and likely Tailwind CSS for styling based on common Next.js project conventions.
+
+**Step 2: Deep Analysis**
+
+**`apps/web/test-scraper5.js`**
+
+*   **Security**: The script fetches data from GitHub. If this were a user-facing API endpoint, it could be vulnerable to Server-Side Request Forgery (SSRF) if the target URL was user-controlled. As a local test script, this risk is minimal. No hardcoded secrets.
+*   **Logic**: The scraping logic for extracting achievement details and handling duplicate URLs appears correct.
+*   **Performance**: Uses `Promise.all` for parallel fetching of hovercard URLs, which is good for performance. Multiple `cheerio.load()` calls might incur minor overhead but are unlikely to be a bottleneck for typical use.
+*   **Architecture**: It's a standalone script, not integrated into the Next.js app's architecture. Lacks robust error handling for `fetch` operations, which could lead to unhandled rejections and script crashes on network issues or invalid responses.
+*   **Features**: As a test script, its features are limited to its specific scraping task.
+*   **Testing**: The script itself does not have automated tests.
+*   **DX**: Simple and easy to run.
+*   **Consistency**: Uses modern JavaScript features like `async/await` and `const`.
+*   **Dead Code**: None apparent.
+
+**`apps/web/tsconfig.json`**
+
+*   **Consistency/Logic**: The `"target": "ES2017"` setting is inconsistent with previous feedback from Joseph regarding `git-pulse#13`, which aimed to update the compiler target to ES2020. While that PR was "COMMENTED" and not fully merged, the current setting is not aligned with the desired direction.
+*   **Other**: Standard and appropriate configurations for a Next.js TypeScript project.
+
+**`apps/web/src/components/ProfileReadme.tsx`**
+
+*   **Security (CRITICAL)**: The component uses `rehypeRaw` within `ReactMarkdown`. `rehypeRaw` directly inserts raw HTML into the DOM. If the `content` prop is sourced from untrusted user input (e.g., a GitHub README from an arbitrary user), this creates a severe Cross-Site Scripting (XSS) vulnerability. An attacker could inject malicious scripts or HTML, leading to data theft, UI defacement, or other harmful actions.
+*   **Logic**:
+    *   `proxyImageUrl`: The logic for handling relative paths, absolute URLs, and `data:` URIs for image proxying is robust and well-implemented for CORS safety.
+    *   `applyAlign`: Correctly applies CSS styles for text and block alignment.
+    *   `img` and `picture` rendering: Handles `width`/`height` attributes, `loading="lazy"`, and prioritizes dark-mode `source` elements effectively.
+    *   `a` tag handling: Correctly sets `target="_blank"` and `rel="noopener noreferrer"` for external links, improving security and user experience.
+*   **Performance**: Rendering large Markdown files with custom components can be computationally intensive, but this is inherent to the task and `react-markdown`.
+*   **Architecture**: The component is well-structured, with clear separation of concerns (image proxying, alignment logic, Markdown rendering customization).
+*   **Features**: Provides comprehensive and thoughtful handling for various Markdown elements, especially images and links, enhancing the display of GitHub READMEs.
+*   **Testing**: Lacks dedicated unit tests, particularly for complex logic like `proxyImageUrl` and the custom `ReactMarkdown` component overrides.
+*   **DX**: The component is self-contained and reusable.
+*   **Consistency**: Follows React and TypeScript conventions.
+*   **Dead Code**: None apparent.
+
+**Step 3: Pick ONE Improvement**
+
+The most critical improvement is addressing the **Cross-Site Scripting (XSS) vulnerability in `apps/web/src/components/ProfileReadme.tsx`**. This is a severe security flaw that could be exploited if untrusted Markdown content is rendered, making it the highest priority.
+
+**Step 4: Write the Executor's Plan**
+
+**WHAT to change:**
+Introduce a sanitization step for the Markdown content within the `ProfileReadme` component to prevent Cross-Site Scripting (XSS) vulnerabilities. This involves adding a robust HTML sanitization library and applying it to the `content` prop before it is processed by `ReactMarkdown` with `rehype-raw`.
+
+**WHERE in the file(s):**
+The primary change will be in `apps/web/src/components/ProfileReadme.tsx`. Additionally, a new dependency will need to be added to the `package.json` file located at `apps/web/package.json`.
+
+**WHY this matters:**
+The `ProfileReadme` component currently uses `rehype-raw`, which allows raw HTML embedded within Markdown to be rendered directly into the DOM. If the `content` prop originates from an untrusted source, such as a user-provided GitHub README, an attacker could inject malicious HTML or JavaScript. This could lead to a Cross-Site Scripting (XSS) attack, enabling them to steal sensitive user data, deface the application's interface, or execute unauthorized actions on behalf of legitimate users. Implementing HTML sanitization is crucial to neutralize this critical security risk by stripping out potentially harmful elements and attributes from the incoming Markdown content.
+
+**HOW to do it:**
+1.  **Add Dependency**: The Executor should first add the `dompurify` package as a production dependency to the `apps/web` project. This will involve modifying the `dependencies` section of the `apps/web/package.json` file to include `dompurify`. After modifying the `package.json`, the Executor should ensure the package manager (e.g., `pnpm`) is run to install the new dependency.
+2.  **Import Sanitizer**: In the file `apps/web/src/components/ProfileReadme.tsx`, locate the existing import statements at the top of the file. Add a new import statement to bring in `DOMPurify` from the `dompurify` library.
+3.  **Sanitize Content**: Inside the `ProfileReadme` functional component, before the `return` statement, declare a new constant variable. This variable will hold the sanitized version of the `content` prop. Assign the result of calling `DOMPurify.sanitize()` with the original `content` prop as its argument to this new constant variable.
+4.  **Use Sanitized Content**: Locate the `ReactMarkdown` component within the `return` statement. Modify the prop that currently passes the original `content` to instead pass the newly created sanitized content variable.
+
+**Executor**: {"title": "[SEC] Sanitize Markdown Content in ProfileReadme Component", "body": "### Problem / Gap\nThe `ProfileReadme` component is vulnerable to Cross-Site Scripting (XSS) attacks because it uses `rehype-raw` to render raw HTML from untrusted Markdown content.\n\n### Solution & Insight\nTo fix this, we introduce a sanitization step using `DOMPurify`. We first add `dompurify` as a dependency, then import and use it to sanitize the `content` prop before passing it to `ReactMarkdown`. This ensures that any malicious HTML or scripts are removed, preventing XSS attacks.\n\n### Impact\nThis change significantly improves the security of the application by preventing XSS attacks that could steal user data, deface the interface, or execute unauthorized actions.", "branch_name": "bot/fix-xss-1774308989", "edits": [{"file": "apps/web/package.json", "search": "\"dependencies\": {", "replace": "\"dependencies\": {\n    \"dompurify\": \"^2.3.8\","}, {"file": "apps/web/src/components/ProfileReadme.tsx", "search": "import ReactMarkdown from \"react-markdown\";", "replace": "import ReactMarkdown from \"react-markdown\";\nimport DOMPurify from \"dompurify\";"}, {"file": "apps/web/src/components/ProfileReadme.tsx", "search": "return (\n    <div className=\"w-full animate-fade-in\">", "replace": "const sanitizedContent = DOMPurify.sanitize(content);\nreturn (\n    <div className=\"w-full animate-fade-in\">"}, {"file": "apps/web/src/components/ProfileReadme.tsx", "search": ">{content}</ReactMarkdown>", "replace": ">{sanitizedContent}</ReactMarkdown>"}]}
+
+**Reviewer**: CORRECT: The Executor correctly identified the XSS vulnerability and proposed the right solution using `dompurify`. The first three edits (adding dependency, importing `DOMPurify`, and calling `DOMPurify.sanitize`) are correct and well-placed. However, the final edit to replace `{content}` with `{sanitizedContent}` within the `ReactMarkdown` component failed due to an incorrect search block. The proposed search string `>{content}</ReactMarkdown>` did not match the actual file content, resulting in 'NO CHANGES' for this critical step. This means the unsanitized content would still be rendered, negating the security fix. The corrected edits address this by using the precise search block for `{content}` including its leading whitespace.
+
+---
