@@ -18,6 +18,7 @@ GROK_API_KEY = os.environ.get('GROK_API_KEY')
 GEMINI_FALLBACK_API_KEY = os.environ.get('GEMINI_FALLBACK_API_KEY')
 GEMINI2_FALLBACK_API_KEY = os.environ.get('GEMINI2_FALLBACK_API_KEY')
 GROK_FALLBACK_API_KEY = os.environ.get('GROK_FALLBACK_API_KEY')
+DEEPSEEK_API_KEY = os.environ.get('DEEPSEEK_API_KEY')
 GEMINI_NEWCRONS_API_KEY = os.environ.get('GEMINI_NEWCRONS_API_KEY')
 GROQ_NEWCRONS_API_KEY = os.environ.get('GROQ_NEWCRONS_API_KEY')
 APP_ID = os.environ.get('APP_ID')
@@ -591,7 +592,7 @@ def query_groq(prompt, api_key=None, temperature=0.1):
     keys = [api_key, retry_key]
     
     payload = {
-        "model": "llama-3.3-70b-versatile",
+        "model": "llama-3.1-8b-instant",
         "messages": [{"role": "user", "content": prompt}],
         "temperature": temperature,
         "max_tokens": 4096
