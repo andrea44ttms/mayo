@@ -4217,3 +4217,69 @@ This improvement focuses on `editor.c` and addresses critical compilation and lo
 **Reviewer**: Reviewer response unparseable
 
 ---
+
+## Cycle 1774233205
+**Scanner**: ## SCANNER ANALYSIS: HOLYKEYZ/git-pulse
+
+### Step 1: Codebase Understanding
+
+This repository, `git-pulse`, is a developer-centric social platform that overlays a Twitter-like feed format onto the GitHub ecosystem. It allows users to share project releases ("Ships"), repository updates, and engage in discussions, all presented with a GitHub-inspired dark theme.
+
+The file `apps/web/src/lib/github.ts` serves as the primary service layer for interacting with the GitHub API. It defines various TypeScript interfaces for GitHub entities like users, repositories, and events, and provides functions to fetch this data using both GitHub's REST and GraphQL APIs, incorporating caching mechanisms.
+
+The file `apps/web/src/components/AiSummary.tsx` is a React client component responsible for fetching and displaying an AI-generated summary or "pitch" for a given GitHub repository. It manages its own loading and visibility state.
+
+The file `pnpm-workspace.yaml` defines the workspace configuration for the monorepo, indicating that both `apps/*` and `packages/*` directories contain pnpm workspaces.
+
+The codebase primarily uses Next.js 15 (App Router), React, TypeScript, Tailwind CSS for styling, Prisma for ORM, and NextAuth for authentication. It follows modern web development conventions for a full-stack application.
+
+### Step 2: Deep Analysis
+
+**apps/web/src/lib/github.ts:**
+
+*   **Logic (Critical Bug)**: The `getGitHubAllRepos` function has a truncated URL parameter. The line constructing the API endpoint ends with `&type` followed by `...[TRUNCATED FOR LENGTH]...`. This indicates an incomplete URL string, which will either lead to a malformed request, an API error, or incorrect data being returned. Based on the `getGitHubRepos` function, it is highly probable that `&type=owner` is the intended completion to filter for repositories owned by the user. This is a functional bug.
+*   **Performance**: The use of `withCache` and `next: { revalidate: ... }` headers is a good practice for performance and reducing API calls.
+*   **Error Handling**: Both `fetchWithAuth` and `fetchGraphQL` include robust error handling for network issues, HTTP status codes (including rate limiting for REST), and GraphQL-specific errors. GraphQL errors are logged, but data is still returned if available, which is a common pattern for partial responses.
+*   **Security**: Token slicing for cache keys and logs (`token.slice(-10)`, `token.slice(-6)`) is a good practice to prevent accidental full token exposure.
+*   **Consistency**: Type definitions are clear and comprehensive. Function naming is consistent.
+
+**apps/web/src/components/AiSummary.tsx:**
+
+*   **Logic**: The component correctly handles loading states, toggles visibility, and provides a fallback message for failed summary generation.
+*   **Features**: The "AI Summary" feature is a good enhancement for repository presentation.
+*   **DX**: The UI provides clear feedback to the user (loading, hide/show).
+*   **Consistency**: Uses standard React hooks and component structure.
+
+**pnpm-workspace.yaml:**
+
+*   **Consistency**: The workspace definition is standard and correctly formatted for a pnpm monorepo.
+*   **Dead Code**: None.
+
+### Step 3: Pick ONE Improvement
+
+The most valuable improvement is to fix the critical logic bug in `apps/web/src/lib/github.ts` where the `getGitHubAllRepos` function's URL parameter is truncated. This is a direct functional bug that will prevent the API call from working as intended or at all, making the "all repos" feature unreliable or broken.
+
+### Step 4: Write the Executor's Plan
+
+**WHAT** to change:
+The `getGitHubAllRepos` function in `apps/web/src/lib/github.ts` has an incomplete URL string for the GitHub API endpoint. The `type` query parameter is truncated. This needs to be completed to `&type=owner` to ensure the function correctly fetches repositories owned by the specified user, consistent with other repository fetching functions in the file.
+
+**WHERE** in the file(s):
+The change is located in the `apps/web/src/lib/github.ts` file, specifically within the `getGitHubAllRepos` asynchronous function. The exact line to modify is the one constructing the API endpoint string, which currently ends with `&type`.
+
+**WHY** this matters:
+This is a critical logic bug. The current truncation of the `type` parameter in the API endpoint string means that the GitHub API request will be malformed. This will likely result in either a failed API call, an incorrect response, or a default behavior from the GitHub API that does not align with the intended purpose of fetching a user's *owned* repositories. Fixing this ensures the "all repos" functionality works reliably and as expected, providing accurate data to the application.
+
+**HOW** to do it:
+1.  Locate the `getGitHubAllRepos` asynchronous function in `apps/web/src/lib/github.ts`.
+2.  Find the line where the API endpoint string is constructed, which currently looks like:
+    ````
+            `/users/${username}/repos?sort=${sort}&per_page=${perPage}&page=${page}&type
+    ````
+3.  Modify this line to correctly append `type=owner` to the URL string. The corrected line should explicitly include `&type=owner` at the end of the URL string.
+
+**Executor**: {"title": "[LOGIC] Fix Malformed URL Parameter in getGitHubAllRepos", "body": "### Problem / Gap\nThe `getGitHubAllRepos` function in `apps/web/src/lib/github.ts` contains a truncated URL parameter. The line constructing the API endpoint string is incomplete, which will lead to a malformed request or incorrect data being returned.\n\n### Solution & Insight\nTo fix this issue, we need to complete the URL string by appending `&type=owner` to filter for repositories owned by the user. The corrected line should look like this: `/users/${username}/repos?sort=${sort}&per_page=${perPage}&page=${page}&type=owner`.\n\n### Impact\nFixing this bug ensures the 'all repos' functionality works reliably and as expected, providing accurate data to the application.", "branch_name": "bot/fix-1774233210", "edits": [{"file": "apps/web/src/lib/github.ts", "search": "/users/${username}/repos?sort=${sort}&per_page=${perPage}&page=${page}&type", "replace": "/users/${username}/repos?sort=${sort}&per_page=${perPage}&page=${page}&type=owner"}]}
+
+**Reviewer**: REJECTED x2: The 'ACTUAL DIFF PREVIEW' shows that your edit would change `/users/${username}/repos?sort=${sort}&per_page=${perPage}&page=${page}&type=owner` to `/users/${username}/repos?sort=${sort}&per_page=${perPage}&page=${page}&type=owner=owner`. This introduces a malformed URL parameter and is a critical functional bug. Your JSON `search` block (`/users/${username}/repos?sort=${sort}&per_page=${perPage}&page=${page}&type`) does not precisely match the 'original' line shown in the diff preview (`...&type=owner`). You must ensure your `search` block *exactly* matches the current content of the file you intend to modify. If the file already contains `&type=owner`, then the truncation bug identified by the Scanner is no longer present, and no change is needed. Please re-verify the *actual* content of `apps/web/src/lib/github.ts` and propose an edit that is non-destructive and accurately addresses any existing issues, or makes no change if the line is already correct.
+
+---
