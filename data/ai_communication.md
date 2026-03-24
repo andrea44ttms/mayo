@@ -4264,68 +4264,7 @@ This is a critical security vulnerability. As the code currently stands, anyone 
 
 ---
 
-## Cycle 1774302008
-**Scanner**: ## SCANNER ANALYSIS: HOLYKEYZ/git-pulse
-
-### Step 1: Codebase Understanding
-
-*   **What this repository does**: The `git-pulse` repository appears to be a web application designed to visualize a user's GitHub contributions, similar to the contribution graph found on GitHub profiles. It likely fetches contribution data and renders it as a heatmap.
-*   **What the target files do within the repo**:
-    *   `package.json` (root): This file defines the workspace for a monorepo setup using `pnpm`. It specifies top-level scripts for development, building, and linting, delegating these tasks to the `web` application within the monorepo. It also sets the required Node.js engine version.
-    *   `apps/web/src/components/ContributionHeatmap.tsx`: This React client component is responsible for rendering the core contribution heatmap visualization. It takes an array of contribution weeks and a total contribution count, then calculates and displays individual contribution cells, month labels, and tooltips for each day. It also includes logic for auto-scrolling to the most recent contributions.
-    *   `apps/web/src/components/Skeletons.tsx`: This file contains various React components that serve as loading placeholders (skeletons) for different parts of the application, such as individual posts, sidebars, and entire feeds. These improve the perceived performance and user experience during data fetching.
-*   **Patterns, frameworks, or conventions**: The codebase uses a monorepo structure managed by `pnpm`. The frontend is built with React and Next.js, utilizing TypeScript for type safety. Styling is handled with Tailwind CSS, and components follow a standard React functional component pattern, with some using client-side directives.
-
-### Step 2: Deep Analysis
-
-*   **Security**: No immediate security vulnerabilities are apparent in the provided files. `package.json` specifies a Node.js version, and the React components are client-side rendering UI.
-*   **Logic**:
-    *   In `ContributionHeatmap.tsx`, the logic for calculating `monthPositions` (where month labels are placed) is overly complex and contains a potential bug. Specifically, the condition `if (new Date(dayToCheck.date).getDate() < 14)` within the `else if (lastMonth === -1)` block is a heuristic that might cause the label for the *first month* in the dataset to be omitted if the data starts after the 14th day of that month. This leads to an incomplete or incorrect visualization.
-    *   The `useEffect` for auto-scrolling is correctly implemented.
-*   **Performance**:
-    *   In `ContributionHeatmap.tsx`, `new Date()` objects are created multiple times within loops during the `monthPositions` calculation. While the dataset size (around 52 weeks * 7 days) is small enough that this is unlikely to cause a major performance bottleneck, it's a minor inefficiency that could be slightly optimized. However, the primary issue is the logical correctness.
-*   **Architecture**: The component-based architecture is standard for React/Next.js. The use of a monorepo with `pnpm` workspaces is a sound architectural choice for managing multiple related packages.
-*   **Features**: The heatmap provides essential features like tooltips and auto-scrolling. The skeleton components are a good addition for user experience.
-*   **Testing**: No test files were provided for analysis, so it's not possible to assess testing coverage or patterns.
-*   **DX (Developer Experience)**: The `monthPositions` calculation logic in `ContributionHeatmap.tsx` is difficult to read and understand due to its nested conditions and specific heuristics. Simplifying this logic would improve maintainability.
-*   **Consistency**:
-    *   Styling in `ContributionHeatmap.tsx` uses a mix of Tailwind classes and inline styles with hardcoded hex values (e.g., `LEVEL_COLORS`, `bg-[#24292f]`). The comment "not tailwind classes — so they survive jit purge" explains this choice, making it a deliberate, albeit mixed, approach.
-    *   Naming conventions and import patterns are consistent across the files.
-*   **Dead Code**: No obvious dead code was found in the provided files.
-
-### Step 3: Pick ONE Improvement
-
-The most valuable improvement is to fix the **logic bug** in `ContributionHeatmap.tsx` that can cause the first month's label to be missing from the heatmap. This directly impacts the correctness and completeness of the primary visualization feature.
-
-### Step 4: Write the Executor's Plan
-
-**WHAT** to change:
-The logic responsible for calculating the positions and labels of months displayed above the contribution heatmap needs to be refactored. The current implementation can fail to display the label for the very first month in the dataset under certain conditions, specifically if the data for that month starts after the 14th day. The revised logic should accurately identify the first occurrence of each month within the provided contribution data and ensure its label is always displayed at the correct week column.
-
-**WHERE** in the file(s):
-The change will be made in the `apps/web/src/components/ContributionHeatmap.tsx` file, specifically within the `ContributionHeatmap` functional component, inside the block where `monthPositions` is calculated. This is the `weeks.forEach` loop that populates the `monthPositions` array.
-
-**WHY** this matters:
-This change is crucial because the current `monthPositions` calculation contains a logic flaw. If the contribution data for the initial month starts mid-month (e.g., on the 15th or later), the label for that month will not be rendered on the heatmap. This results in an incomplete and potentially confusing visualization for the user, as the first segment of the heatmap would lack a corresponding month label, hindering readability and data interpretation. Fixing this ensures the heatmap accurately represents the timeline of contributions.
-
-**HOW** to do it:
-1.  Locate the `monthPositions` array initialization and the subsequent `weeks.forEach` loop that populates it within the `ContributionHeatmap` component in `apps/web/src/components/ContributionHeatmap.tsx`.
-2.  Replace the entire existing `weeks.forEach` loop and its internal logic for calculating `monthPositions` with a new, simplified approach.
-3.  Initialize `lastMonth` to an invalid value (e.g., -1) before the loop to ensure the very first month encountered is always captured.
-4.  Iterate through each `week` in the `weeks` array, using its index as `weekIndex`.
-5.  Inside this loop, for each `week`, find the *first `ContributionDay`* within that `week` whose month is *different* from the `lastMonth` that was recorded. This can be done by iterating through `week.contributionDays` and comparing `new Date(day.date).getMonth()` with `lastMonth`.
-6.  If such a `ContributionDay` is found (meaning a new month has started within this `week`), extract its month.
-7.  Add an object to the `monthPositions` array containing the month's label (from `MONTH_LABELS`) and the current `weekIndex` as its `col` value.
-8.  Update `lastMonth` to the month that was just added to `monthPositions`.
-9.  This revised logic will ensure that a month label is added for every new month encountered in the dataset, positioned at the week where that month first appears, resolving the bug.
-
-**Executor**: {"title": "[LOGIC] Fix Month Label Calculation in ContributionHeatmap", "body": "### Problem / Gap\nThe current logic for calculating month labels in the ContributionHeatmap component contains a bug. It can fail to display the label for the first month in the dataset if the data for that month starts after the 14th day. This results in an incomplete visualization.\n\n### Solution & Insight\nTo fix this, we need to revise the logic for calculating `monthPositions`. The new approach should accurately identify the first occurrence of each month within the provided contribution data and ensure its label is always displayed at the correct week column. We achieve this by iterating through each week, finding the first day of each month, and adding its label to `monthPositions` accordingly.\n\n### Impact\nThis change ensures the contribution heatmap always correctly displays month labels, improving the overall accuracy and usability of the visualization.", "branch_name": "bot/fix-month-labels-1774302010", "edits": [{"file": "apps/web/src/components/ContributionHeatmap.tsx", "search": "weeks.forEach((week, i) => {\n        const monthStartDay = week.contributionDays.find(day => {\n            const dateObj = new Date(day.date);\n            return dateObj.getDate() >= 1 && dateObj.getDate() <= 7;\n        });\n        \n        const dayToCheck = monthStartDay || week.contributionDays[0];\n        if (dayToCheck) {\n            const month = new Date(dayToCheck.date).getMonth();\n            if (month !== lastMonth && i > 0) {\n                monthPositions.push({ label: MONTH_LABELS[month], col: i });\n                lastMonth = month;\n            } else if (lastMonth === -1) {\n                lastMonth = month;\n                if (new Date(dayToCheck.date).getDate() < 14) {\n                    monthPositions.push({ label: MONTH_LABELS[month], col: i });\n                }\n            }\n        }\n    });", "replace": "weeks.forEach((week, weekIndex) => {\n        const firstContributionDay = week.contributionDays.find((day) => {\n            const date = new Date(day.date);\n            return date.getDate() >= 1 && date.getDate() <= 7;\n        }) || week.contributionDays[0];\n        \n        if (firstContributionDay) {\n            const currentMonth = new Date(firstContributionDay.date).getMonth();\n            if (currentMonth !== lastMonth) {\n                monthPositions.push({ label: MONTH_LABELS[currentMonth], col: weekIndex });\n                lastMonth = currentMonth;\n            }\n        }\n    });"}]}
-
-**Reviewer**: APPROVE: The Executor's proposed edit directly addresses the logic bug identified by the Scanner in `ContributionHeatmap.tsx`. The search block is an exact match, and the replacement code is functional, cleaner, and correctly implements the fix for month label positioning. It simplifies the logic, removes the problematic heuristic, and ensures the first month's label is always displayed. This change is valuable, aligned with the plan, and avoids common pitfalls seen in past rejections for this repository.
-
----
-
-## Cycle 1774305455
+1774305455
 **Scanner**: This repository, `git-pulse`, functions as a social media or content aggregation platform centered around GitHub activity. It allows users to create posts, which can include embedded GitHub repository information, and interact with content. It leverages GitHub for user authentication and to fetch repository and user data.
 
 The file `apps/web/src/app/api/search/route.ts` defines an API endpoint for searching. It concurrently queries the application's database for posts and the GitHub API for users and repositories, returning aggregated results. The file `apps/web/src/app/api/posts/route.ts` defines an API endpoint for creating new posts. It handles user authentication (via session or API key), applies rate limiting, validates post content, extracts hashtags, and can enrich posts with GitHub repository embed data before saving them to the database. The `package.json` file is the root package configuration for this pnpm monorepo, defining scripts for development, building, and linting the `web` application, and specifying Node.js engine requirements.
@@ -4619,5 +4558,73 @@ Specifically, the `ProfilePage` function signature and the line immediately foll
 **Executor**: {"title": "[LOGIC] Correct params type and await usage in ProfilePage", "body": "### Problem / Gap\nThe `params` prop in the `ProfilePage` component is incorrectly typed as `Promise<{username: string;}>` and then `await` is used when destructuring `username` from `params`. This will cause a runtime error because `params` is a plain object in Next.js App Router, not a Promise.\n\n### Solution & Insight\nTo fix this, we need to correct the type of `params` to `{username: string;}` and remove the `await` keyword when accessing `username`. This ensures that the code correctly handles the `params` object as intended by Next.js App Router.\n\n### Impact\nThis change fixes a critical logic bug that prevents the profile page from functioning correctly, potentially causing runtime errors or incorrect data rendering. By correcting the `params` type and usage, we ensure the application's stability and proper functionality.", "branch_name": "bot/fix-params-type-1774328170", "edits": [{"file": "apps/web/src/app/profile/[username]/page.tsx", "search": "export default async function ProfilePage({ params }: {params: Promise<{username: string;}>;}) {\n  const session = await auth();\n  const { username } = await params;", "replace": "export default async function ProfilePage({ params }: {params: {username: string;};}) {\n  const session = await auth();\n  const { username } = params;"}]}
 
 **Reviewer**: APPROVE: The Executor's proposed edit correctly addresses a critical bug in `apps/web/src/app/profile/[username]/page.tsx`. The `params` prop in Next.js App Router is a plain object, not a Promise. The edit correctly updates the type definition and removes the redundant `await` keyword, making the code functionally correct and compilable. The search block is exact, the change is valuable, and it aligns perfectly with the Scanner's recommendation.
+
+---
+
+## Cycle 1774332164
+**Scanner**: ## Codebase Understanding
+
+This repository, `git-pulse`, is a Next.js application designed to provide a social platform centered around GitHub activity. It likely allows users to view profiles, trending repositories, and interact with GitHub data in a more engaging way.
+
+The file `apps/web/src/app/api/image-proxy/route.ts` implements a server-side image proxy. Its purpose is to fetch external images (like GitHub badges, stats cards, or user content) and serve them through the GitPulse domain. This is crucial for bypassing Cross-Origin Resource Sharing (CORS) and Content Security Policy (CSP) restrictions that would otherwise prevent these images from loading directly in a web browser.
+
+The file `apps/web/package.json` defines the dependencies and scripts for the `web` application within the monorepo. It indicates the use of Next.js 15, React 19, Next-Auth v5 (beta), Prisma for database interactions, and various libraries for markdown rendering, AI integration, and web scraping.
+
+The file `apps/web/src/components/RightSidebar.tsx` is a React Server Component responsible for rendering the right-hand sidebar of the web application. It displays dynamic content such as trending GitHub repositories and suggested users to follow, fetching data from both the application's database (via Prisma) and the GitHub API.
+
+The codebase primarily uses Next.js 15 with React Server Components, TypeScript, Tailwind CSS (implied by `postcss.config.mjs` and `tailwind.config.ts`), and Prisma for ORM. It follows a typical API route pattern for the image proxy and server component patterns for data fetching in `RightSidebar.tsx`.
+
+## Deep Analysis
+
+### Security
+*   **SSRF Prevention (image-proxy)**: The `image-proxy` route includes basic Server-Side Request Forgery (SSRF) prevention by checking for `127.0.0.1`, `localhost`, `::1`, `10.`, and `192.168.` hostnames. However, this list is incomplete and misses other common private IP ranges, specifically `172.16.0.0/12` (172.16.0.0 to 172.31.255.255) and `169.254.0.0/16` (link-local addresses). An attacker could potentially use a URL pointing to these unblocked private ranges to probe or interact with internal network resources.
+*   **CORS (image-proxy)**: The `Access-Control-Allow-Origin: "*"` header is used. While common for image proxies, it means any domain can request images through this proxy. This is acceptable for its stated purpose but should be noted.
+
+### Logic
+*   **RightSidebar - "Follow" Button**: The "Follow" button rendered for suggested users in `RightSidebar.tsx` is a static UI element. It has no associated functionality to actually perform a follow action, which is a logical gap from a user interaction perspective.
+*   **RightSidebar - GitHub API Fallback Error Handling**: The `try...catch` block around `getSuggestedGitHubUsers` in `RightSidebar.tsx` silently catches errors. While this prevents a crash, it means API failures for suggested GitHub users are not logged or communicated, potentially hiding issues.
+
+### Performance
+*   **RightSidebar - API Calls**: The `getGitHubTrendingRepos` and `getSuggestedGitHubUsers` functions in `RightSidebar.tsx` are awaited directly. While Next.js Server Components handle this, these calls hit external APIs. Without caching, these API calls will be made on every request, potentially leading to rate limiting or slower load times for frequently accessed pages. The `lru-cache` dependency is present in `package.json` but not utilized here.
+
+### Architecture
+*   **Error Handling Consistency**: Error handling in `image-proxy` uses a generic "Proxy error" for the catch block, which could be more specific for debugging.
+
+### Features
+*   **RightSidebar - "Follow" Functionality**: As noted under Logic, the "Follow" button is present but lacks actual implementation. Adding this functionality would be a significant feature enhancement.
+
+### Testing
+*   **Input Validation (image-proxy)**: The `url` parameter is checked for presence. The `parsedUrl.hostname` is checked for obvious SSRF. The `contentType` is strictly validated. These are good, but the SSRF checks could be more comprehensive.
+
+### DX (Developer Experience)
+*   No obvious critical DX issues. The project structure is standard for a Next.js monorepo.
+
+### Consistency
+*   Naming conventions and import patterns appear consistent across the analyzed files.
+
+### Dead Code
+*   No immediately apparent dead code in the analyzed files.
+
+## Pick ONE Improvement
+
+The most valuable improvement is to **enhance the Server-Side Request Forgery (SSRF) prevention logic** in the image proxy. This is a critical security fix that addresses an incomplete protection mechanism, preventing potential access to internal network resources. While other issues like the "Follow" button functionality or caching are important, a security vulnerability takes precedence.
+
+## Executor's Plan
+
+**WHAT**: Enhance the Server-Side Request Forgery (SSRF) prevention logic to include additional private IP ranges.
+
+**WHERE**: In the `GET` function of `apps/web/src/app/api/image-proxy/route.ts`, specifically within the `try` block where the `parsedUrl.hostname` is currently checked for `10.` and `192.168.`.
+
+**WHY**: The existing SSRF prevention is incomplete, only covering a subset of private IP address ranges. It currently checks for loopback addresses (`127.0.0.1`, `localhost`, `::1`), `10.0.0.0/8`, and `192.168.0.0/16`. However, it misses `172.16.0.0/12` (which spans `172.16.0.0` to `172.31.255.255`) and `169.254.0.0/16` (link-local addresses). Expanding these checks will significantly improve the security posture of the image proxy by preventing requests from being directed to a broader set of internal network resources, thereby mitigating potential attacks.
+
+**HOW**:
+1.  Locate the `if` statement within the `GET` function's `try` block that currently checks `parsedUrl.hostname` for `127.0.0.1`, `localhost`, `::1`, `10.`, and `192.168.`.
+2.  Before this `if` statement, introduce a new constant variable. This variable will hold a boolean value indicating if the hostname is a loopback address or falls within the `10.0.0.0/8`, `192.168.0.0/16`, or `169.254.0.0/16` ranges. The existing checks for `127.0.0.1`, `localhost`, `::1`, `10.`, and `192.168.` should be moved into this new variable's assignment, and a new check for `parsedUrl.hostname.startsWith("169.254.")` should be added to it.
+3.  Introduce a second new constant variable. This variable will hold a boolean value specifically for the `172.16.0.0/12` range. To determine this, first split the `parsedUrl.hostname` string by the `.` character. Then, check if the resulting array has exactly four parts (indicating an IPv4 address). If it does, parse the first and second parts as integers. The variable should be true if the first part is `172` AND the second part is greater than or equal to `16` AND less than or equal to `31`.
+4.  Modify the original `if` statement's condition to combine these two new boolean variables using an `||` (OR) operator. The `if` statement should now trigger the SSRF prevention if either the first combined private IP check is true OR the `172.16.0.0/12` check is true.
+
+**Executor**: {"title": "[SEC] Enhance SSRF Prevention in Image Proxy", "body": "### Problem / Gap\nThe existing Server-Side Request Forgery (SSRF) prevention in the image proxy is incomplete, missing checks for private IP ranges such as 172.16.0.0/12 and 169.254.0.0/16.\n\n### Solution & Insight\nEnhance the SSRF prevention logic to include these additional private IP ranges. This involves introducing new checks for the hostname of the URL being proxied, ensuring it does not fall within these ranges to prevent potential access to internal network resources.\n\n### Impact\nThis enhancement significantly improves the security posture of the image proxy by mitigating the risk of SSRF attacks targeting internal network resources.", "branch_name": "bot/enhance-ssrf-prevention-1774332164", "edits": [{"file": "apps/web/src/app/api/image-proxy/route.ts", "search": "if (\"127.0.0.1\", \"localhost\", \"::1\").includes(parsedUrl.hostname) || parsedUrl.hostname.startsWith(\"10.\") || parsedUrl.hostname.startsWith(\"192.168.\"))", "replace": "const isPrivateIP = [\"127.0.0.1\", \"localhost\", \"::1\"].includes(parsedUrl.hostname) || parsedUrl.hostname.startsWith(\"10.\") || parsedUrl.hostname.startsWith(\"192.168.\") || parsedUrl.hostname.startsWith(\"169.254.\");\nconst is172Range = parsedUrl.hostname.split('.').length === 4 && parsedUrl.hostname.split('.')[0] === '172' && parseInt(parsedUrl.hostname.split('.')[1]) >= 16 && parseInt(parsedUrl.hostname.split('.')[1]) <= 31;\nif (isPrivateIP || is172Range)"}]}
+
+**Reviewer**: CORRECT: The Executor's proposed change correctly identifies the need to enhance SSRF prevention by including additional private IP ranges (`169.254.0.0/16` and `172.16.0.0/12`). However, the `search` block was inaccurate, missing the array brackets `[]` around the IP addresses, which caused the 'NO CHANGES' outcome. Additionally, the `replace` block had incorrect indentation for the new lines and omitted the opening curly brace `{` for the `if` statement, which would have introduced a syntax error.
 
 ---
