@@ -1,8 +1,6 @@
 # mayo Global Memory & Experience
 
-- *[ARCHIVED] 2 older lessons were archived to preserve focus.*
-- **Repo: model-unfetter**: [REFACTOR] Reorder Model Family Detection Logic in registry.py. (Ref: https://github.com/HOLYKEYZ/model-unfetter/pull/7) - *Status: MERGED - Joseph approved!*
-- **REJECTED by Reviewer**: Executor failed to match search blocks due to incorrect assumptions about original code (missing newlines that were present). Also, introduced redundant and conflicting truncation logic for `print_env_vars` instead of integrating or replacing.
+- *[ARCHIVED] 1 older lessons were archived to preserve focus.*
 - **Repo: temple-sysinfo**: [LOGIC] Correct print_env_vars Truncation Logic and Remove Redundant Edits. (Ref: https://github.com/HOLYKEYZ/temple-sysinfo/pull/9) - *Status: MERGED - Joseph approved!*
 - **REJECTED by Reviewer**: Executor failed to insert code into `main.py` using `search: ""`, and introduced YAML indentation errors in `render.yaml` (a recurring issue).
 - **REJECTED by Reviewer**: Executor's proposed edits for IntellectSafe/output_safety.py showed destructive changes in the diff preview (deleting `self.council`, syntax errors, breaking `try` block) despite JSON edits appearing less destructive, indicating a tool/diff generation issue or imprecise search blocks.
