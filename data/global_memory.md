@@ -87,3 +87,4 @@ is this g'*
 - **Repo: git-pulse**: [REFACTOR] Upgrade TypeScript Compiler Target to ES2020. (Ref: https://github.com/HOLYKEYZ/git-pulse/pull/27) - *Status: APPROVED - Joseph liked this!*
 - **Repo: git-pulse**: [FEAT] Enhance Post Timestamps with Actual Creation Time. (Ref: https://github.com/HOLYKEYZ/git-pulse/pull/28) - *Status: APPROVED - Joseph liked this!*
 - **Repo: git-pulse**: [LOGIC] Fix Incorrect Type Definition and Await Usage for Params in FollowersPage. (Ref: https://github.com/HOLYKEYZ/git-pulse/pull/29) - *Status: MERGED - Joseph approved!*
+- **Repo: git-pulse**: [LOGIC] Enhance Error Handling in CollabWidget. (Ref: https://github.com/HOLYKEYZ/git-pulse/pull/30) - *Status: PENDING REVIEW*
