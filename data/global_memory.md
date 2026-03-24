@@ -1,8 +1,6 @@
 # mayo Global Memory & Experience
 
 - *[ARCHIVED] 1 older lessons were archived to preserve focus.*
-- **Repo: VULNRIX**: [REFACTOR] Enhance Email Validation and Standardize Import in EmailPatternAnalyzer. (Ref: https://github.com/HOLYKEYZ/VULNRIX/pull/23) - *Status: MERGED - Joseph approved!*
-- **REJECTED by Reviewer**: Executor repeated `script.js` search block indentation errors and failed to insert the new helper function, leading to non-functional code in Joseph-Portfolio.
 - **Repo: micro-edit**: [LOGIC] Fix Compilation Error and Search Highlighting in editor.c. (Ref: https://github.com/HOLYKEYZ/micro-edit/pull/9) - *Status: APPROVED - Joseph liked this!*
 - **REJECTED by Reviewer**: Executor failed to apply critical `tailwind.config.ts` changes, leading to undefined Tailwind classes in components. Also submitted duplicate edits.
 - **REJECTED by Reviewer**: Executor's `tailwind.config.ts` search block was inaccurate, leading to destructive replacement of existing color definitions instead of insertion. Emphasize exact search blocks and non-destructive additions.
