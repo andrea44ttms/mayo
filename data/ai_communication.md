@@ -4496,87 +4496,7 @@ The most valuable improvement is to **enhance the Server-Side Request Forgery (S
 
 ---
 
-## Cycle 1774338908
-**Scanner**: ### Step 1: Codebase Understanding
-
-This repository, `git-pulse`, appears to be a web application designed to interact with GitHub, likely to display or manage user-specific GitHub data. It leverages Next.js for its frontend and API routes, and NextAuth.js for authentication with GitHub.
-
-The `package.json` at the root defines the workspace scripts for the monorepo, primarily orchestrating commands for the `web` application. The `apps/web/src/types/next-auth.d.ts` file extends NextAuth.js's default types to include GitHub-specific user information such as `githubId`, `accessToken`, and `login` within the user session and JWT, which is essential for making authenticated calls to the GitHub API. The `apps/web/src/app/api/github/repos/route.ts` file defines a Next.js API route that fetches a list of repositories for the authenticated GitHub user from the GitHub API, processes the data, and returns a simplified list to the client.
-
-The codebase uses Next.js (App Router), NextAuth.js, TypeScript, and pnpm for monorepo management. It follows standard conventions for these frameworks, including API route definitions and type extensions.
-
-### Step 2: Deep Analysis
-
-**apps/web/src/app/api/github/repos/route.ts**
-
-*   **Security**:
-    *   Authentication check (`session?.user?.accessToken`) is present and correct.
-    *   The GitHub API endpoint is hardcoded, preventing SSRF vulnerabilities from user input.
-    *   No hardcoded secrets are present; the access token is retrieved from the session.
-    *   The `affiliation=owner,collaborator` parameter correctly limits fetched repositories to those the user has direct involvement with, preventing unintended data exposure.
-*   **Logic**:
-    *   The API call correctly uses the bearer token for authorization.
-    *   Error handling for unauthorized access (`401`) and failed GitHub API responses (`res.ok`) is in place.
-    *   The data mapping to `name` and `full_name` is straightforward.
-    *   **Potential Logic Issue**: The `per_page=100` parameter limits the fetched repositories to a maximum of 100. If a user has more than 100 repositories, the application will not retrieve or display them all. This could be a missing feature or a design limitation depending on requirements.
-    *   **Potential Logic Issue**: The `data.map((r: any) => ...)` uses `any` for the repository object, which bypasses TypeScript's type safety benefits and could lead to runtime errors if the GitHub API response structure changes unexpectedly.
-*   **Performance**:
-    *   `cache: 'no-store'` is used, which is appropriate for dynamic user-specific data that should always be fresh.
-    *   A single API call is made to GitHub; no obvious N+1 query issues or redundant calls.
-*   **Architecture**:
-    *   The API route follows Next.js App Router conventions.
-    *   `NextResponse.json` is used for consistent JSON responses.
-    *   **Missing Error Handling Pattern**: The `try...catch` block uses a generic `catch { ... }` without capturing or logging the actual error object. This makes debugging server-side issues extremely difficult as the specific cause of a `500` error is not recorded.
-*   **Features**:
-    *   As noted above, full pagination for users with more than 100 repositories is not implemented.
-    *   No user-configurable filtering or sorting options are provided for the repositories.
-*   **Testing**: No explicit tests are provided in the analyzed files.
-*   **DX (Developer Experience)**:
-    *   The use of `any` type for GitHub repository objects reduces type safety and IDE assistance.
-    *   The generic `catch` block significantly hinders debugging efforts.
-*   **Consistency**: Generally consistent with Next.js and TypeScript practices, except for the `any` type usage.
-*   **Dead Code**: No dead code observed.
-
-**apps/web/src/types/next-auth.d.ts**
-
-*   **Consistency**: Follows standard NextAuth.js type extension patterns.
-*   **Logic**: Correctly extends types to include necessary GitHub user data.
-*   **Dead Code**: No dead code.
-
-**package.json (root)**
-
-*   **Consistency**: Standard pnpm monorepo setup with filtered scripts.
-*   **DX**: Clear script definitions.
-*   **Dead Code**: No dead code.
-*   **Anti-Hallucination Check**: The `engines.node` version is `">=18.0.0"`, which is a valid and stable version. No changes needed or suggested.
-
-### Step 3: Pick ONE Improvement
-
-The most valuable improvement is to enhance the error handling in the `apps/web/src/app/api/github/repos/route.ts` file by logging the actual error. This addresses a critical gap in observability and developer experience, making the application significantly easier to debug and maintain when unexpected server errors occur. While the `any` type and pagination limitations are also important, the lack of error logging directly impacts the ability to diagnose *any* runtime issue in this critical API route. This falls under "Architecture: Missing error handling patterns" and directly improves "Bugs, security flaws, and broken logic" by making them discoverable.
-
-### Step 4: Write the Executor's Plan
-
-**WHAT**:
-Modify the `GET` function in `apps/web/src/app/api/github/repos/route.ts` to capture and log the specific error object when an exception occurs during the GitHub API fetch. The client-facing error message will remain generic for security purposes, but the server will record detailed error information for debugging.
-
-**WHERE**:
-In the file `apps/web/src/app/api/github/repos/route.ts`, locate the `try...catch` block within the `GET` asynchronous function. The current `catch` block is defined as `} catch {`.
-
-**WHY**:
-The existing `catch` block silently swallows any exceptions that occur during the GitHub API request or subsequent processing. While it correctly returns a generic "server error" to the client (status 500), it provides no internal logging of the actual error details. This makes it extremely challenging for developers to understand *why* an error occurred, hindering debugging, troubleshooting, and overall maintainability of the API route. By logging the error, we gain crucial insights into runtime failures without exposing sensitive information to end-users. This is a fundamental improvement in the application's robustness and developer experience.
-
-**HOW**:
-1.  Change the `catch` block signature from `} catch {` to `} catch (error: unknown) {`. This will allow the error object to be captured.
-2.  Inside the `catch` block, before the `return NextResponse.json(...)` statement, add a `console.error` call to log the captured error. A suitable log message would be `"Error fetching GitHub repositories:"` followed by the `error` object.
-3.  Ensure that the `return NextResponse.json({ error: "server error" }, { status: 500 });` line remains unchanged, preserving the generic client response.
-
-**Executor**: {"title": "[LOGIC] Improve Error Handling in GitHub Repos API Route", "body": "### Problem / Gap\nThe current implementation of the GitHub repositories API route lacks detailed error logging. When an error occurs during the fetch or processing of repository data, the error is silently caught and a generic 'server error' is returned to the client. This makes debugging and troubleshooting challenging because the actual cause of the error is not recorded or visible to developers.\n\n### Solution & Insight\nTo address this gap, we will modify the `catch` block in the `GET` function of `apps/web/src/app/api/github/repos/route.ts` to log the specific error object that is caught. This will provide valuable insights into the nature of runtime failures without exposing sensitive information to end-users. The generic 'server error' response to the client will remain unchanged to preserve security.\n\n### Impact\nBy implementing detailed error logging, we significantly enhance the maintainability and debuggability of the GitHub repositories API route. Developers will be able to quickly identify and address issues, reducing downtime and improving overall system reliability.", "branch_name": "bot/upgrade-1774338908", "edits": [{"file": "apps/web/src/app/api/github/repos/route.ts", "search": "            try {\n                const res = await fetch(\"https://api.github.com/user/repos?sort=updated&per_page=100&affiliation=owner,collaborator\", {\n                    headers: {\n                        Authorization: `Bearer ${session.user.accessToken}`,\n                        Accept: \"application/vnd.github+json\",\n                    },\n                    // next 14 fetch options\n                    cache: 'no-store'\n                });\n\n                if (!res.ok) {\n                    return NextResponse.json({ error: \"failed to fetch repos\" }, { status: res.status });\n                }\n\n                const data = await res.json();\n                const repos = data.map((r: any) => ({\n                    name: r.name,\n                    full_name: r.full_name\n                }));\n                \n                return NextResponse.json(repos);\n            } catch {\n                return NextResponse.json({ error: \"server error\" }, { status: 500 });\n            }", "replace": "            try {\n                const res = await fetch(\"https://api.github.com/user/repos?sort=updated&per_page=100&affiliation=owner,collaborator\", {\n                    headers: {\n                        Authorization: `Bearer ${session.user.accessToken}`,\n                        Accept: \"application/vnd.github+json\",\n                    },\n                    // next 14 fetch options\n                    cache: 'no-store'\n                });\n\n                if (!res.ok) {\n                    return NextResponse.json({ error: \"failed to fetch repos\" }, { status: res.status });\n                }\n\n                const data = await res.json();\n                const repos = data.map((r: any) => ({\n                    name: r.name,\n                    full_name: r.full_name\n                }));\n                \n                return NextResponse.json(repos);\n            } catch (error: unknown) {\n                console.error(\"Error fetching GitHub repositories:\", error);\n                return NextResponse.json({ error: \"server error\" }, { status: 500 });\n            }"}]}
-
-**Reviewer**: APPROVE: The Executor's proposed edit accurately implements the Scanner's plan to enhance error logging in the `apps/web/src/app/api/github/repos/route.ts` file. The `search` block precisely matches the original content, and the `replace` block correctly introduces `catch (error: unknown)` and `console.error` for improved debugging without altering the client-facing error response. The diff preview confirms the change is clean, functional, and non-destructive, avoiding common pitfalls observed in this repository's history.
-
----
-
-## Cycle 1774342615
+1774342615
 **Scanner**: ## SCANNER ANALYSIS
 
 ### Step 1: Codebase Understanding
@@ -4822,5 +4742,78 @@ The most valuable improvement is to enhance the accuracy and user experience of 
 **Executor**: {"title": "[FEAT] Enhance Post Timestamps with Actual Creation Time", "body": "### Problem / Gap\nThe current implementation of post timestamps in the `FeedClient` component and the SSE stream in `route.ts` displays a hardcoded 'Just now' for all new posts, which is misleading and reduces the utility of the feed.\n\n### Solution & Insight\nTo address this, we will modify the SSE stream to send the actual creation timestamp of new posts as an ISO 8601 string and update the client-side `FeedClient` component to format and display this timestamp as a human-readable relative time. Additionally, we will improve error handling in the `FeedClient` component's SSE message processing to log errors instead of silently swallowing them.\n\n### Impact\nThis enhancement will significantly improve the user experience by providing accurate and relative timestamps for posts, making it easier for users to understand the recency of updates. Improved error handling will also enhance the stability and debuggability of the application.", "branch_name": "bot/enhance-post-timestamps-1774364521", "edits": [{"file": "apps/web/src/app/api/feed/stream/route.ts", "search": "timestamp: \"Just now\", // fast ui", "replace": "timestamp: post.createdAt.toISOString(),"}, {"file": "apps/web/src/components/FeedClient.tsx", "search": "catch (err) {}", "replace": "catch (err) { console.error('Error processing SSE message:', err); }"}, {"file": "apps/web/src/components/FeedClient.tsx", "search": "timestamp: \"Just now\",", "replace": "timestamp: formatRelativeTimestamp(data.post.timestamp),"}, {"file": "apps/web/src/components/FeedClient.tsx", "search": "", "replace": "function formatRelativeTimestamp(timestamp: string) {\n  const date = new Date(timestamp);\n  const now = new Date();\n  const diff = now.getTime() - date.getTime();\n  const minutes = Math.floor(diff / 1000 / 60);\n  if (minutes < 1) return 'Just now';\n  if (minutes < 60) return `${minutes} minute${minutes > 1 ? 's' : ''} ago`;\n  const hours = Math.floor(minutes / 60);\n  if (hours < 24) return `${hours} hour${hours > 1 ? 's' : ''} ago`;\n  const days = Math.floor(hours / 24);\n  return `${days} day${days > 1 ? 's' : ''} ago`;\n}"}]}
 
 **Reviewer**: CORRECT: The Executor correctly applied the server-side timestamp update and the client-side error logging. However, the critical client-side logic to format the timestamp and insert the utility function failed to apply due to incorrect search blocks. The plan is incomplete without these changes.
+
+---
+
+## Cycle 1774371750
+**Scanner**: ### Step 1: Codebase Understanding
+
+This repository, `git-pulse`, appears to be a web application designed to provide a user interface for interacting with or mimicking aspects of GitHub, such as displaying user profiles, followers, and notifications. It leverages Next.js for its frontend and API routes, React for UI components, Prisma for database interactions, and NextAuth for authentication.
+
+-   **`apps/web/package.json`**: This file defines the project's dependencies and scripts for the Next.js web application. It indicates the use of modern web technologies like Next.js 15, React 19, and Prisma 6.1.0, along with libraries for AI integration (`@google/generative-ai`), web scraping (`cheerio`), and markdown rendering (`react-markdown`).
+-   **`apps/web/src/app/api/notifications/route.ts`**: This file implements API endpoints for managing user notifications. It allows authenticated users to fetch their latest 20 notifications and to mark either a specific notification or all unread notifications as read. It uses NextAuth for session management and Prisma for database operations, ensuring that users can only access their own notifications.
+-   **`apps/web/src/app/profile/[username]/followers/page.tsx`**: This file defines a Next.js page component responsible for displaying a list of followers for a given GitHub username. It fetches follower data using a GitHub API utility (`getGitHubFollowers`) and renders each follower's profile information, including an avatar, name, and a follow button.
+
+The codebase generally follows modern Next.js App Router conventions, utilizing server components where appropriate, and employs TypeScript for type safety. Styling is likely handled by Tailwind CSS, as indicated by configuration files in the repository structure.
+
+### Step 2: Deep Analysis
+
+**Security:**
+-   In `apps/web/src/app/api/notifications/route.ts`, the use of `session?.user?.id` in `where` clauses for Prisma queries correctly scopes operations to the authenticated user, preventing unauthorized access or modification of other users' notifications. This is a good security practice.
+-   In `apps/web/src/app/profile/[username]/followers/page.tsx`, the `username` parameter from the URL is directly used in `getGitHubFollowers`. While GitHub usernames are generally safe, ensuring that `getGitHubFollowers` properly sanitizes or encodes this input before making external API calls is crucial to prevent potential injection vulnerabilities if the underlying GitHub API client is not robust. Assuming `getGitHubFollowers` handles this, it's acceptable.
+
+**Logic:**
+-   **CRITICAL BUG in `apps/web/src/app/profile/[username]/followers/page.tsx`**: The `FollowersPage` component's `params` prop is incorrectly typed as `Promise<{username: string;}>` and subsequently `await params` is used. In Next.js App Router, `params` is directly an object, not a Promise. This will cause `username` to be `undefined` or an incorrect object, leading to the page failing to fetch and display followers correctly.
+-   **BUG in `apps/web/src/app/profile/[username]/followers/page.tsx`**: The `FollowButton` component is rendered with `initialIsFollowing={false}`. This hardcoded value means the button will always initially display "Follow", even if the authenticated user is already following the displayed user. This creates an inconsistent and incorrect user experience.
+-   In `apps/web/src/app/api/notifications/route.ts`, the `GET` endpoint fetches only the latest 20 notifications. While this prevents excessive data transfer, it lacks pagination, meaning users cannot view older notifications beyond the initial 20. This is a feature limitation rather than a bug.
+-   In `apps/web/src/app/profile/[username]/followers/page.tsx`, if `session?.user?.accessToken` is null (i.e., the user is not authenticated), `getGitHubFollowers` is not called, and an empty array is returned. This results in "No followers yet" being displayed. While a design choice, it might be more user-friendly to fetch public followers or prompt the user to log in.
+
+**Performance:**
+-   The `take: 20` limit in the `notifications` API route is a good practice to manage payload size.
+-   The `updateMany` operation for marking all notifications as read is efficient for bulk updates.
+-   The `getGitHubFollowers` call is awaited, which is appropriate for a server component fetching data.
+
+**Architecture:**
+-   The use of Next.js API routes and server components demonstrates a clear architectural pattern for data fetching and presentation.
+-   Error handling in `apps/web/src/app/api/notifications/route.ts` is consistent, returning JSON error messages with appropriate HTTP status codes.
+
+**Features:**
+-   As noted, pagination for notifications is a missing feature.
+-   The `FollowButton` needs dynamic `initialIsFollowing` state.
+
+**Testing:**
+-   No explicit test files are provided for the analyzed files, but this is common for small code snippets. The logic in the notification API and followers page is relatively straightforward, but edge cases (e.g., API errors, empty follower lists) are handled.
+
+**DX (Developer Experience):**
+-   The code is generally readable and follows common TypeScript and Next.js patterns.
+-   The `await params` issue is a common pitfall for developers new to Next.js App Router's server components.
+
+**Consistency:**
+-   Naming conventions and import patterns are consistent across the files.
+-   Styling appears to use Tailwind CSS, which promotes visual consistency.
+
+**Dead Code:**
+-   No obvious dead code was found in the analyzed files.
+
+### Step 3: Pick ONE Improvement
+
+The most critical issue identified is the **logic bug in `apps/web/src/app/profile/[username]/followers/page.tsx` where `params` is incorrectly treated as a Promise**. This bug directly prevents the page from functioning as intended by failing to correctly extract the `username` from the route parameters. Fixing this is paramount as it addresses a fundamental breakage in the application's core logic for this page.
+
+### Step 4: Write the Executor's Plan
+
+**WHAT:** Correct the type definition of the `params` prop in the `FollowersPage` component and remove the unnecessary `await` keyword when destructuring the `username` property.
+
+**WHERE:** In the `FollowersPage` function signature within the file `apps/web/src/app/profile/[username]/followers/page.tsx`.
+
+**WHY:** In Next.js App Router server components, the `params` prop is directly an object containing route parameters, not a Promise. The current type annotation `params: Promise<{username: string;}>` and the subsequent `const { username } = await params;` are incorrect. This error will cause `username` to be `undefined` or an incorrect object, leading to `getGitHubFollowers` being called with an invalid argument or not being called at all. This fundamentally breaks the page's ability to fetch and display followers for the specified username. Correcting this will ensure the page receives and correctly uses the `username` parameter, allowing the follower data to be fetched and rendered as intended.
+
+**HOW:**
+1.  Locate the `FollowersPage` function definition in the file `apps/web/src/app/profile/[username]/followers/page.tsx`.
+2.  Modify the type annotation for the `params` argument from `Promise<{username: string;}>` to ` {username: string;} `.
+3.  On the line where `username` is destructured, remove the `await` keyword. The line `const { username } = await params;` should become `const { username } = params;`.
+
+**Executor**: {"title": "[LOGIC] Fix Incorrect Type Definition and Await Usage for Params in FollowersPage", "body": "### Problem / Gap\nThe `FollowersPage` component incorrectly treats the `params` prop as a Promise and uses `await` when destructuring the `username` property. This prevents the page from functioning as intended, failing to correctly extract the `username` from the route parameters.\n\n### Solution & Insight\nTo fix this, we need to correct the type definition of the `params` prop to an object and remove the unnecessary `await` keyword when destructuring the `username` property. This ensures that the `username` is correctly extracted and used to fetch follower data.\n\n### Impact\nThis fix resolves a critical logic bug, enabling the followers page to correctly display followers for a given GitHub username. It improves the overall user experience and functionality of the application.", "branch_name": "bot/fix-params-type-1774371750", "edits": [{"file": "apps/web/src/app/profile/[username]/followers/page.tsx", "search": "export default async function FollowersPage({ params }: {params: Promise<{username: string;}>;}) {\n  const session = await auth();\n  const { username } = await params;", "replace": "export default async function FollowersPage({ params }: {params: {username: string};}) {\n  const session = await auth();\n  const { username } = params;"}]}
+
+**Reviewer**: APPROVE: The Executor has correctly identified and fixed a critical logic bug in `apps/web/src/app/profile/[username]/followers/page.tsx`. The `params` prop in Next.js App Router server components is an object, not a Promise, and the `await` keyword was incorrectly used. The proposed edit accurately corrects the type annotation and removes the unnecessary `await`, ensuring the `username` is correctly extracted and the page functions as intended. The search block is an exact match, and the replacement code is valid and functional.
 
 ---
