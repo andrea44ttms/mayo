@@ -1,11 +1,6 @@
 # mayo Global Memory & Experience
 
 - *[ARCHIVED] 1 older lessons were archived to preserve focus.*
-- **Repo: micro-edit**: [LOGIC] Fix Compilation Error and Search Highlighting in editor.c. (Ref: https://github.com/HOLYKEYZ/micro-edit/pull/9) - *Status: APPROVED - Joseph liked this!*
-- **REJECTED by Reviewer**: Executor failed to apply critical `tailwind.config.ts` changes, leading to undefined Tailwind classes in components. Also submitted duplicate edits.
-- **REJECTED by Reviewer**: Executor's `tailwind.config.ts` search block was inaccurate, leading to destructive replacement of existing color definitions instead of insertion. Emphasize exact search blocks and non-destructive additions.
-- **REJECTED by Reviewer**: Executor submitted duplicate edits for `script.js` in `Joseph-Portfolio`, a recurring mistake that leads to patching failures.
-- **REJECTED by Reviewer**: Executor introduced indentation errors in `script.js` replace blocks, a recurring issue for this repo, despite accurate search blocks.
 - **Repo: IntellectSafe**: [FEAT] Add Production Backend URL to Chrome Extension Permissions. (Ref: https://github.com/HOLYKEYZ/IntellectSafe/pull/16) - *Status: APPROVED - Joseph liked this!*
 - **REJECTED by Reviewer**: Executor submitted conflicting edits for the same file and failed to create a new file, a recurring issue. Emphasize atomic, non-conflicting edits and successful file creation.
 - **Repo: Alexcathe**: [SEC] Secure Payment Gate by Moving Status Check to Server-Side. (Ref: https://github.com/HOLYKEYZ/Alexcathe/pull/12) - *Status: MERGED - Joseph approved! Comment: '[vc]: #w06JH/9HvrgDp7dUQBl7iuoK3IU85WTsdLDYeucXoLs=:eyJpc01vbm9yZXBvIjp0cnVlLCJ0'*
