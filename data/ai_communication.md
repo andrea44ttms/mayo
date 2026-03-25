@@ -4707,75 +4707,7 @@ The most critical issue identified is the **logic bug in `apps/web/src/app/profi
 
 ---
 
-## Cycle 1774379224
-**Scanner**: **Step 1: Codebase Understanding**
-
-*   **Repository Purpose**: The `git-pulse` repository appears to be a web application designed as a social platform or dashboard for developers. It likely integrates with GitHub to display user profiles, contributions, and facilitate connections between developers.
-*   **Target Files Purpose**:
-    *   `apps/web/src/components/CollabWidget.tsx`: This component is responsible for fetching and displaying a list of "Developers like you," which are collaboration matches based on shared languages and similarity. It shows a loading skeleton while data is being fetched and links to individual developer profiles.
-    *   `apps/web/src/components/BottomNav.tsx`: This component provides a responsive navigation bar positioned at the bottom of the screen, primarily for mobile users. It includes links to Home, Discover, Notifications, and a user's Profile, using Octicons for visual cues and highlighting the currently active route.
-    *   `package.json` (root): This file defines the project's metadata, scripts for development, building, and linting the `web` application within a monorepo structure, and specifies the required Node.js engine version.
-*   **Patterns, Frameworks, or Conventions**: The codebase utilizes Next.js for server-side rendering and routing, React for UI components (using hooks like `useState` and `useEffect`), and TypeScript for type safety. Styling is managed with Tailwind CSS, and icons are sourced from `@primer/octicons-react`. The project is structured as a monorepo, indicated by the root `package.json` and `pnpm-workspace.yaml`. API calls are made using the native `fetch` API.
-
-**Step 2: Deep Analysis**
-
-*   **Security**:
-    *   `CollabWidget.tsx`: The component fetches data from `/api/collab`. Assuming the backend API is properly secured against common vulnerabilities (e.g., authentication, authorization, input validation), the client-side component itself does not introduce direct security flaws. User-provided data (username, shared languages) is rendered, which could be an XSS vector if not properly sanitized on the backend, but `Image` and `Link` components from Next.js generally handle basic sanitization for their attributes.
-    *   `BottomNav.tsx`: No direct security concerns. The `username` prop, if derived from user input, should be sanitized upstream before being used in the profile link.
-*   **Logic**:
-    *   `CollabWidget.tsx`: The `useEffect` hook correctly fetches data on component mount. The loading state and the `null` return for `matches.length === 0` are handled appropriately. However, the `try...catch` block in `fetchMatches` silently swallows errors, which means the user receives no feedback if the API call fails. This is a significant logic flaw from a user experience perspective.
-    *   `BottomNav.tsx`: The navigation logic, active link highlighting, and conditional rendering of the "Profile" link based on `username` presence are all logically sound.
-*   **Performance**:
-    *   Both `CollabWidget.tsx` and `BottomNav.tsx` are small, client-side components with minimal logic, so no significant performance bottlenecks are apparent. The `CollabWidget` includes a good loading skeleton for perceived performance.
-*   **Architecture**:
-    *   `CollabWidget.tsx`: The component directly handles data fetching. While acceptable for a small widget, the silent error handling is an architectural weakness as it lacks a consistent error feedback mechanism.
-    *   `BottomNav.tsx`: The component demonstrates good separation of concerns for navigation and icon abstraction.
-    *   `package.json`: The monorepo setup with `pnpm --filter web` scripts is a sound architectural choice.
-*   **Features**:
-    *   `CollabWidget.tsx`: The "Developers like you" feature is valuable. Adding user feedback for API errors would enhance this feature.
-    *   `BottomNav.tsx`: Provides essential mobile navigation.
-*   **Testing**:
-    *   The provided files do not include explicit tests. The silent error handling in `CollabWidget.tsx` makes it harder to observe and test error states from a user's perspective.
-*   **DX (Developer Experience)**:
-    *   The components are well-structured and use standard React/Next.js patterns.
-    *   The root `package.json` provides basic scripts, but a root-level `test` script for the entire monorepo (or at least the `web` app) could be beneficial.
-*   **Consistency**:
-    *   Styling with Tailwind CSS classes (e.g., `bg-git-card`, `text-git-text`) and icon usage from Octicons are consistent across the components.
-    *   There's a minor inconsistency in icon sizing: the SVG in `CollabWidget` is 16x16, while Octicons in `BottomNav` are `size={20}`. This is a minor aesthetic point.
-*   **Dead Code**: No dead code is apparent in the provided files.
-
-**Step 3: Pick ONE Improvement**
-
-The most valuable improvement is to address the silent error handling in `CollabWidget.tsx`. This is a logic and architecture issue that directly impacts user experience by hiding critical information about why a feature might not be working. It's a functional bug in terms of user feedback, making it a high-priority fix.
-
-**Step 4: Write the Executor's Plan**
-
-**WHAT** to change:
-The `CollabWidget` component currently fetches collaboration matches from an API endpoint. If this fetch operation encounters an error (e.g., network issue, server error), the component silently catches the error and simply stops displaying the widget or remains empty. This behavior should be modified to provide explicit user feedback by displaying an error message when the API call fails. This involves introducing a new state variable to track error status and conditionally rendering a message to the user.
-
-**WHERE** in the file(s):
-The changes will be implemented within the `apps/web/src/components/CollabWidget.tsx` file. Specifically, modifications will be made to the `fetchMatches` asynchronous function inside the `useEffect` hook, and to the component's main return block to include conditional rendering for the error state.
-
-**WHY** this matters:
-Silently failing to load data creates a confusing and frustrating user experience. Users will not understand why the "Developers like you" section is missing or empty, potentially leading them to believe the feature is broken or non-existent. By displaying a clear error message, the application becomes more transparent and robust. This improves the overall user experience, provides valuable debugging information (even if generic to the user), and aligns with better error handling architectural patterns, preventing a "Logic" and "Architecture" flaw.
-
-**HOW** to do it:
-1.  Introduce a new state variable named `error` using `useState`, initialized to `null` or an empty string, alongside the existing `matches` and `loading` states. This variable will hold an error message if an API call fails.
-2.  Inside the `fetchMatches` asynchronous function, within the `try` block, ensure that if the API call is successful, the `error` state is explicitly reset to `null` or an empty string before `setMatches` is called. This clears any previous error messages.
-3.  Modify the `catch` block in `fetchMatches`. Instead of an empty comment, set the `error` state variable to a user-friendly message, such as "Failed to load developers. Please try again later."
-4.  In the component's main render logic, after the `if (loading)` check, add a new conditional check for the `error` state. If `error` is not `null` or empty, render a `div` element that displays the `error` message. This `div` should be styled appropriately (e.g., using `text-git-muted` or a similar class for subtle feedback) and could optionally include a "Retry" button that triggers `fetchMatches` again.
-5.  Ensure that if an `error` is present, the component renders the error message and does not proceed to render `null` based on `matches.length === 0`, as the error state takes precedence over an empty match list.
-
-**SCOPE**:
-This improvement is entirely contained within the `apps/web/src/components/CollabWidget.tsx` file. No changes are required in any other files.
-
-**Executor**: {"title": "[LOGIC] Enhance Error Handling in CollabWidget", "body": "### Problem / Gap\nThe CollabWidget component silently fails when encountering an error during API calls, leaving the user without feedback.\n\n### Solution & Insight\nWe introduce a new state variable `error` to track error status and conditionally render an error message. This enhances user experience by providing clear feedback on failures.\n\n### Impact\nImproved transparency and robustness in error handling, aligning with better architectural patterns and enhancing overall user experience.", "branch_name": "bot/enhance-error-handling-1774379224", "edits": [{"file": "apps/web/src/components/CollabWidget.tsx", "search": "const [matches, setMatches] = useState<CollabMatch[]>([]);\nconst [loading, setLoading] = useState(true);", "replace": "const [matches, setMatches] = useState<CollabMatch[]>([]);\nconst [loading, setLoading] = useState(true);\nconst [error, setError] = useState<string | null>(null);"}, {"file": "apps/web/src/components/CollabWidget.tsx", "search": "try {\n                const res = await fetch(\"/api/collab\");\n                if (res.ok) {\n                    const data = await res.json();\n                    setMatches(data.matches || []);\n                }\n            } catch {\n                // silently fail\n            } finally {\n                setLoading(false);\n            }", "replace": "try {\n                const res = await fetch(\"/api/collab\");\n                if (res.ok) {\n                    const data = await res.json();\n                    setMatches(data.matches || []);\n                    setError(null);\n                }\n            } catch (e) {\n                setError('Failed to load developers. Please try again later.');\n            } finally {\n                setLoading(false);\n            }"}, {"file": "apps/web/src/components/CollabWidget.tsx", "search": "if (loading) {\n            return (\n                <div className=\"border border-git-border rounded-lg p-4 bg-git-card\">\n                    <h3 className=\"text-sm font-semibold text-git-text mb-3\">Developers like you</h3>\n                    <div className=\"space-y-3\">\n                        {[1, 2, 3].map((i) => (\n                            <div key={i} className=\"flex items-center gap-3 animate-pulse\">\n                                <div className=\"w-8 h-8 rounded-full bg-git-border\" />\n                                <div className=\"flex-1 space-y-1\">\n                                    <div className=\"h-3 w-24 bg-git-border rounded\" />\n                                    <div className=\"h-2 w-32 bg-git-border rounded\" />\n                                </div>\n                            </div>\n                        ))}\n                    </div>\n                </div>\n            );\n        }\n        if (matches.length === 0) return null;", "replace": "if (loading) {\n            return (\n                <div className=\"border border-git-border rounded-lg p-4 bg-git-card\">\n                    <h3 className=\"text-sm font-semibold text-git-text mb-3\">Developers like you</h3>\n                    <div className=\"space-y-3\">\n                        {[1, 2, 3].map((i) => (\n                            <div key={i} className=\"flex items-center gap-3 animate-pulse\">\n                                <div className=\"w-8 h-8 rounded-full bg-git-border\" />\n                                <div className=\"flex-1 space-y-1\">\n                                    <div className=\"h-3 w-24 bg-git-border rounded\" />\n                                    <div className=\"h-2 w-32 bg-git-border rounded\" />\n                                </div>\n                            </div>\n                        ))}\n                    </div>\n                </div>\n            );\n        }\n        if (error) {\n            return (\n                <div className=\"border border-git-border rounded-lg p-4 bg-git-card\">\n                    <h3 className=\"text-sm font-semibold text-git-text mb-3\">Developers like you</h3>\n                    <div className=\"text-git-muted\">{error}</div>\n                </div>\n            );\n        }\n        if (matches.length === 0) return null;"}]}
-
-**Reviewer**: APPROVE: The Executor's proposed edits correctly implement robust error handling for the `CollabWidget` component. All three edits are precise, non-destructive, and align perfectly with the Scanner's plan to introduce an `error` state, catch API errors, and display a user-friendly message. The conditional rendering order (loading -> error -> no matches) is also correct. This significantly improves user experience by providing feedback instead of silently failing.
-
----
-
-## Cycle 1774385092
+1774385092
 **Scanner**: ## Codebase Understanding
 
 The `git-pulse` repository appears to be a social media or content aggregation platform, specifically tailored for developers or technical content. It allows users to post updates, share repository information, react to posts, and comment. The platform integrates with GitHub-like events (Pull Requests, Issues, Pushes) and displays user profiles and activity.
@@ -5056,5 +4988,69 @@ Currently, the form identifies a repository using its `name` property (e.g., "my
 **Executor**: {"title": "[LOGIC] Fix Ambiguous Repository Identification in ShipItForm", "body": "### Problem / Gap\nThe current implementation of the ShipItForm component uses the non-unique `name` property of a GitHub repository for identification. This can lead to ambiguity and incorrect data association when multiple users have repositories with the same name.\n\n### Solution & Insight\nTo resolve this issue, we will update the component to use the unique `full_name` property of the repository. This involves modifying the state variables, the select element, and the API request body to explicitly include the unique identifier.\n\n### Impact\nBy using the unique `full_name` for repository identification, we ensure accurate and unambiguous data association, preventing potential misattributions and enhancing the reliability of the 'ship it' feature.", "branch_name": "bot/fix-ambiguous-repo-id-1774405813", "edits": [{"file": "apps/web/src/components/ShipItForm.tsx", "search": "const [repo, setRepo] = useState('');", "replace": "const [selectedRepoFullName, setSelectedRepoFullName] = useState('');\nconst [selectedRepoDisplayName, setSelectedRepoDisplayName] = useState('');"}, {"file": "apps/web/src/components/ShipItForm.tsx", "search": "          <select \n              value={repo}\n              onChange={(e) => setRepo(e.target.value)}\n              className=\"w-full bg-git-bg text-git-text text-sm p-2 rounded-md border border-git-border focus:outline-none focus:ring-2 focus:ring-git-accent focus:border-transparent appearance-none\"\n            >", "replace": "          <select \n              value={selectedRepoFullName}\n              onChange={(e) => {\n                const selectedRepo = repos.find(r => r.full_name === e.target.value);\n                if (selectedRepo) {\n                  setSelectedRepoFullName(e.target.value);\n                  setSelectedRepoDisplayName(selectedRepo.name);\n                }\n              }}\n              className=\"w-full bg-git-bg text-git-text text-sm p-2 rounded-md border border-git-border focus:outline-none focus:ring-2 focus:ring-git-accent focus:border-transparent appearance-none\"\n            >"}, {"file": "apps/web/src/components/ShipItForm.tsx", "search": "              {repos.map(r => (\n                <option key={r.name} value={r.name}>{r.name}</option>\n              ))}", "replace": "              {repos.map(r => (\n                <option key={r.full_name} value={r.full_name}>{r.name}</option>\n              ))}"}, {"file": "apps/web/src/components/ShipItForm.tsx", "search": "          body: JSON.stringify({ \n            content: `Shipped a new release of ${repo}!`,\n            type: 'ship',\n            shipDetails: { version, changelog }\n          }),", "replace": "          body: JSON.stringify({ \n            content: `Shipped a new release of ${selectedRepoDisplayName}!`,\n            type: 'ship',\n            shipDetails: { version, changelog, repoFullName: selectedRepoFullName }\n          }),"}]}
 
 **Reviewer**: CORRECT: The Executor correctly identified the need to use unique repository identifiers and implemented the core logic for state management and API payload. However, it missed updating all references to the old `repo` state variable, specifically in the `handleSubmit` validation and the submit button's `disabled` prop. This would lead to `ReferenceError` at runtime.
+
+---
+
+## Cycle 1774414653
+**Scanner**: ## Codebase Understanding
+
+The `git-pulse` repository appears to be a web application, likely a social platform or content aggregator focused on developer activity, similar to a "GitHub Pulse" or a developer-centric news feed. It allows users to explore trending topics and posts.
+
+-   **`apps/web/package.json`**: This file defines the project's dependencies and scripts for the `web` application within the monorepo. It lists frameworks like Next.js, React, Prisma, and NextAuth.js, along with utilities for markdown rendering, database interaction, and AI features.
+-   **`apps/web/src/app/explore/tags/page.tsx`**: This file is a Next.js App Router page responsible for displaying a list of trending hashtags. It fetches all post hashtags from the database, aggregates them in memory, sorts them by count, and displays the top 50.
+-   **`apps/web/src/app/api/auth/[...nextauth]/route.ts`**: This file sets up the NextAuth.js authentication routes for the application, exporting the `GET` and `POST` handlers provided by the authentication library. It also forces dynamic rendering for these routes.
+
+The codebase uses Next.js with the App Router, React for UI, Prisma as an ORM for database interactions, NextAuth.js for authentication, and Tailwind CSS for styling. It follows modern TypeScript and JavaScript conventions.
+
+## Deep Analysis
+
+### `apps/web/package.json`
+
+-   **Consistency**: The package versions (Next.js 15, React 19, Next-Auth 5 beta) are consistent with the anti-hallucination rules and should not be changed.
+-   **Dead Code**: The `ws` (WebSocket) dependency is listed but its usage is not immediately apparent from the provided files. While it might be used elsewhere in the `web` app, its presence without clear usage in the analyzed files suggests a potential for dead code if it's not utilized at all. This would require a broader scan to confirm.
+-   **Features**: `@google/generative-ai` is present, indicating AI features are planned or implemented, but not visible in the current files.
+
+### `apps/web/src/app/explore/tags/page.tsx`
+
+-   **Performance (CRITICAL)**: The most significant issue is the method used to calculate trending hashtags. The code explicitly states: `// in production, this would be a materialized view or indexed aggregation query`. Currently, it fetches *all* posts from the database (`prisma.post.findMany`) to extract hashtags, then performs in-memory aggregation, sorting, and slicing.
+    -   **Problem**: This approach is highly inefficient and will not scale as the number of posts grows. Each request to this page will trigger a full table scan for hashtags, leading to increased database load, slower response times, and potential timeouts under heavy traffic. This is a classic N+1 query *like* problem in terms of data processing, even if it's a single database call.
+-   **Logic**: The aggregation logic itself (counting, sorting, slicing) is correct for the in-memory approach.
+-   **Security**: No direct security vulnerabilities observed in this file. User input for tags is normalized (`toLowerCase()`) and sanitized for URL generation (`replace('#', '')`).
+-   **Architecture**: The comment about materialized views highlights a known architectural limitation or a temporary implementation choice.
+-   **Features**: The trending calculation is basic (top 50 by raw count). It could be enhanced with time-based trending (e.g., last 24 hours, last week) for more dynamic results, but this is a feature enhancement rather than a fix.
+
+### `apps/web/src/app/api/auth/[...nextauth]/route.ts`
+
+-   **Logic**: This file correctly implements the standard NextAuth.js App Router pattern by exporting handlers from a shared library.
+-   **Security**: The security of the authentication process relies on the `@/lib/auth` implementation and NextAuth.js itself. This file merely acts as a passthrough.
+-   **Performance**: `export const dynamic = "force-dynamic";` is appropriate for authentication routes, ensuring they are not statically cached and always respond dynamically.
+-   **Consistency**: Follows standard NextAuth.js conventions.
+
+## Pick ONE Improvement
+
+The single most valuable improvement is to address the **performance bottleneck** in `apps/web/src/app/explore/tags/page.tsx` by implementing an in-memory cache for the trending hashtags. This directly tackles a critical scalability issue explicitly acknowledged by the codebase's own comments and leverages an existing dependency (`lru-cache`).
+
+## Executor's Plan
+
+**WHAT** to change:
+Implement an in-memory LRU (Least Recently Used) cache for the trending hashtags data. This will store the computed list of trending tags for a specified duration, preventing redundant and expensive database queries on every page load.
+
+**WHERE** in the file(s):
+The changes will primarily be within `apps/web/src/app/explore/tags/page.tsx`. A new `LRUCache` instance will be initialized outside the `TagsPage` component function. The existing data fetching and aggregation logic will be wrapped with cache read/write operations.
+
+**WHY** this matters:
+The current implementation of the `TagsPage` fetches all post hashtags from the database and performs in-memory aggregation on every request. This process is highly inefficient and will not scale as the number of posts in the database grows. It leads to slow page load times, increased database load, and potential performance degradation under moderate to heavy traffic. By caching the result, subsequent requests within the cache's time-to-live will serve the data directly from memory, drastically reducing database queries and improving response times and overall application scalability. The codebase itself acknowledges this as a production concern.
+
+**HOW** to do it:
+1.  At the top of the `apps/web/src/app/explore/tags/page.tsx` file, import the `LRUCache` class from the `lru-cache` package.
+2.  Declare and initialize a new `LRUCache` instance outside the `TagsPage` async function. This cache should be configured with a maximum size of `1` (since it will only store one list of trending tags) and a `ttl` (time-to-live) of approximately `300000` milliseconds (5 minutes) to ensure data freshness while providing significant performance benefits.
+3.  Inside the `TagsPage` async function, before the `prisma.post.findMany` call, attempt to retrieve the trending tags data from the initialized cache. Use a consistent key, for example, a string like `"trending_tags"`.
+4.  If the data is found in the cache, immediately return that cached data, skipping the database query and aggregation logic.
+5.  If the data is not found in the cache, proceed with the existing logic to fetch posts from Prisma, aggregate the hashtags, sort them, and slice the top 50.
+6.  After the trending tags list has been successfully computed, store this result in the cache using the same key (`"trending_tags"`) before returning it from the `TagsPage` function.
+
+**Executor**: {"title": "[PERF] Implement In-Memory Cache for Trending Hashtags", "body": "### Problem / Gap\nThe current implementation of the `TagsPage` fetches all post hashtags from the database and performs in-memory aggregation on every request. This process is highly inefficient and will not scale as the number of posts in the database grows.\n\n### Solution & Insight\nImplement an in-memory LRU cache for the trending hashtags data to store the computed list of trending tags for a specified duration, preventing redundant and expensive database queries on every page load.\n\n### Impact\nThis improvement will drastically reduce database queries and improve response times, enhancing the overall scalability of the application.", "branch_name": "bot/improve-trending-tags-cache-1774414653", "edits": [{"file": "apps/web/src/app/explore/tags/page.tsx", "search": "const posts = await prisma.post.findMany({ select: { hashtags: true } });\n\n  const tagCounts: Record<string, number> = {};\n  for (const p of posts) {\n    for (const t of p.hashtags || []) {\n      const normalized = t.toLowerCase();\n      tagCounts[normalized] = (tagCounts[normalized] || 0) + 1;\n    }\n  }\n\n  // sort by count descending\n  const trending = Object.entries(tagCounts).\n  sort((a, b) => b[1] - a[1]).\n  slice(0, 50); // top 50 trending", "replace": "import LRU from 'lru-cache';\nconst cache = new LRU({ max: 1, ttl: 300000 }); // 5 minutes\nconst cacheKey = 'trending_tags';\nlet trending = cache.get(cacheKey);\nif (!trending) {\n  const posts = await prisma.post.findMany({ select: { hashtags: true } });\n  const tagCounts: Record<string, number> = {};\n  for (const p of posts) {\n    for (const t of p.hashtags || []) {\n      const normalized = t.toLowerCase();\n      tagCounts[normalized] = (tagCounts[normalized] || 0) + 1;\n    }\n  }\n  trending = Object.entries(tagCounts).\n  sort((a, b) => b[1] - a[1]).\n  slice(0, 50); // top 50 trending\n  cache.set(cacheKey, trending);\n}"}]}
+
+**Reviewer**: CORRECT: The Executor's plan to implement caching is excellent and directly addresses a critical performance bottleneck. However, the proposed edit incorrectly places the `import LRU from 'lru-cache';` statement inside the `TagsPage` async function. Import statements must be at the top-level of a module, outside any function. This requires splitting the proposed change into two separate edits: one for the import statement at the top of the file, and another for the caching logic within the `TagsPage` function.
 
 ---
