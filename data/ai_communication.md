@@ -5054,3 +5054,81 @@ The current implementation of the `TagsPage` fetches all post hashtags from the 
 **Reviewer**: CORRECT: The Executor's plan to implement caching is excellent and directly addresses a critical performance bottleneck. However, the proposed edit incorrectly places the `import LRU from 'lru-cache';` statement inside the `TagsPage` async function. Import statements must be at the top-level of a module, outside any function. This requires splitting the proposed change into two separate edits: one for the import statement at the top of the file, and another for the caching logic within the `TagsPage` function.
 
 ---
+
+## Cycle 1774418690
+**Scanner**: ## Codebase Understanding
+
+This repository, `git-pulse`, functions as a social feed or platform for GitHub users. It allows users to share updates related to their GitHub activities, such as announcing new software releases, discovering new repositories, and receiving notifications, effectively creating a social layer on top of GitHub interactions.
+
+The `apps/web/src/components/ShipItForm.tsx` file is a React component that provides a user interface for announcing a new software release. Users can select one of their GitHub repositories from a dropdown, specify a version tag, and write a changelog. Upon submission, this information is used to create a "ship" type post that appears in the main feed.
+
+The `apps/web/package.json` file defines the project's dependencies and scripts for the `web` application. It indicates the use of Next.js for the frontend, React for UI, Prisma for database interaction, and various libraries for GitHub integration, markdown rendering, and potentially AI features.
+
+The `apps/web/src/components/BottomNav.tsx` file implements a responsive bottom navigation bar, primarily for mobile devices. It displays links to key sections of the application like Home, Discover, Notifications, and the user's Profile, dynamically highlighting the currently active page.
+
+The codebase primarily uses the Next.js App Router framework, React functional components with hooks, TypeScript for type safety, and Tailwind CSS for styling. It interacts with backend API routes for data fetching and submission, and integrates with GitHub's API.
+
+## Deep Analysis
+
+### apps/web/src/components/ShipItForm.tsx
+
+*   **Security**:
+    *   **Potential XSS Vulnerability**: The `changelog` field accepts user input and is sent to the backend. The `package.json` indicates the use of `react-markdown` with `rehype-raw`, which is designed to parse and render raw HTML. If the `changelog` content is not sanitized on the backend before storage and/or on the frontend before rendering, a malicious user could inject arbitrary HTML or script tags, leading to Cross-Site Scripting (XSS) attacks when the post is viewed.
+*   **Logic**:
+    *   **Ambiguous Repository Identification**: The form currently allows users to select a repository by its `name` (e.g., "my-project"). However, GitHub repositories are uniquely identified by their `full_name` (e.g., "owner/my-project"). The `repos` state correctly fetches `full_name`, but the `<option>` elements in the dropdown use `r.name` as their `value`. When the form is submitted, only the `name` is sent in the `content` string. This creates an ambiguity if a user has multiple repositories with the same short name under different owners, potentially leading to the "Ship It" post being associated with the wrong repository or failing due to an inability to uniquely identify the target.
+    *   **Missing Error Feedback**: While `console.error` is used for API call failures (fetching repos, submitting post), there is no user-facing feedback (e.g., a toast notification, an error message on the form) to inform the user about what went wrong.
+*   **Features**:
+    *   **Improved Repository Display**: Displaying the `full_name` (e.g., "owner/repo-name") in the repository selection dropdown would provide clearer context to the user and prevent confusion, especially for users with many repositories or similarly named ones.
+    *   **Success Feedback**: No visual confirmation or message is shown to the user after a successful release submission, which could improve user experience.
+*   **Testing**:
+    *   **Input Validation**: The `version` input could benefit from client-side validation (e.g., a regex check for semantic versioning) to guide users towards correct input formats.
+*   **DX**:
+    *   The `custom-scrollbar` class is used, implying custom scrollbar styling, but the actual CSS definition is not provided in the analyzed files.
+
+### apps/web/package.json
+
+*   **Architecture**:
+    *   The presence of `@google/generative-ai` suggests integration with AI capabilities, which is an interesting architectural choice for a social feed.
+    *   The `next-auth` dependency is a beta version (`5.0.0-beta.30`). While I am forbidden from suggesting version changes, beta versions can sometimes introduce instability or breaking changes compared to stable releases. (Acknowledged but cannot act on due to anti-hallucination rule).
+    *   `react` and `react-dom` are `19.0.0`, and `next` is `15.0.0`. These are very recent versions. (Acknowledged as correct due to anti-hallucination rule).
+
+### apps/web/src/components/BottomNav.tsx
+
+*   **Logic**:
+    *   The conditional rendering of the "Profile" link based on `username` is correctly implemented.
+    *   The active state logic for navigation items (`pathname === item.href`) is sound.
+*   **Features**:
+    *   The use of `pb-safe` for padding suggests consideration for safe area insets on mobile devices, which is a good practice for modern mobile web applications.
+
+## Pick ONE Improvement
+
+The most valuable improvement to address is the **ambiguous repository identification in `ShipItForm.tsx`**. This is a critical logic flaw that can lead to incorrect data association and user confusion, directly impacting the core functionality of "shipping a release." While the XSS vulnerability is also high priority, fixing it completely would likely require changes in backend storage and frontend rendering components not provided in the current file scope. The ambiguous repository ID can be fully addressed within `ShipItForm.tsx`.
+
+## Executor's Plan
+
+**WHAT:** Modify the `ShipItForm` component to ensure that when a user submits a new release, the unique `full_name` of the selected GitHub repository (e.g., "owner/repo-name") is sent to the backend, rather than just the potentially ambiguous short `name`. This will involve updating the value associated with each option in the repository selection dropdown and clarifying the displayed text for better user experience.
+
+**WHERE:** This change will be entirely within the `apps/web/src/components/ShipItForm.tsx` file.
+
+1.  Locate the `repos.map` function that generates the `<option>` elements for the repository `<select>` dropdown.
+2.  Locate the `handleSubmit` function where the `repo` state is used to construct the `content` for the API post.
+
+**WHY:** The current implementation uses only the short `name` of a repository for identification when submitting a release. GitHub repositories are uniquely identified by their `full_name` (which includes the owner/organization). If a user has multiple repositories with the same short `name` (e.g., "my-project" under different owners), the backend would receive an ambiguous identifier, potentially leading to the "Ship It" post being incorrectly linked to the wrong repository or failing entirely. By sending the `full_name`, we guarantee unique identification, ensuring releases are accurately attributed and processed. Displaying the `full_name` in the dropdown also significantly improves clarity for the user.
+
+**HOW:**
+
+1.  **Modify the `<option>` elements in the repository `<select>` dropdown:**
+    *   Find the `<select>` element that has `value={repo}` and `onChange={(e) => setRepo(e.target.value)}`.
+    *   Inside this `<select>` element, locate the `repos.map(r => (` block that generates the `<option>` tags.
+    *   For each `<option>` tag, change its `value` attribute from `r.name` to `r.full_name`.
+    *   Additionally, for improved user clarity, change the displayed text of each `<option>` tag from `r.name` to `r.full_name`. This will show "owner/repo-name" in the dropdown.
+2.  **No direct change is needed for the `repo` state or `handleSubmit` function's `JSON.stringify` body:**
+    *   The `repo` state is already a string, and the `onChange` handler for the `<select>` correctly updates it with `e.target.value`.
+    *   Once the `<option>` values are changed to `r.full_name`, the `repo` state will automatically hold the `full_name` when an option is selected.
+    *   Therefore, the existing `content: \`Shipped a new release of ${repo}!\`` within the `handleSubmit` function will correctly use the `full_name` without requiring any modification to that specific line.
+
+**Executor**: {"title": "[LOGIC] Fix Ambiguous Repository Identification in ShipItForm", "body": "### Problem / Gap\nThe current implementation of the ShipItForm uses only the short name of a repository for identification when submitting a release. This can lead to ambiguity if a user has multiple repositories with the same short name under different owners.\n\n### Solution & Insight\nTo fix this, we need to modify the ShipItForm component to use the full_name of the selected GitHub repository (e.g., owner/repo-name) instead of just the name. We will update the value associated with each option in the repository selection dropdown and clarify the displayed text for better user experience.\n\n### Impact\nThis change will ensure that releases are accurately attributed to the correct repository, preventing potential errors or failures due to ambiguous repository identification.", "branch_name": "bot/fix-ambiguous-repo-id-1774418690", "edits": [{"file": "apps/web/src/components/ShipItForm.tsx", "search": "              {repos.map(r => (\n                <option key={r.name} value={r.name}>{r.name}</option>\n              ))}\n", "replace": "              {repos.map(r => (\n                <option key={r.full_name} value={r.full_name}>{r.full_name}</option>\n              ))}\n"}]}
+
+**Reviewer**: APPROVE: The Executor's proposed edit precisely addresses the identified critical logic flaw of ambiguous repository identification in `ShipItForm.tsx`. The search block accurately matches the original content, and the replacement correctly updates the `key`, `value`, and displayed text of the `<option>` elements to use `r.full_name`. This ensures unique identification of repositories and improves user clarity, fully aligning with the Scanner's and Executor's plan. The change is functional, non-destructive, and valuable.
+
+---
