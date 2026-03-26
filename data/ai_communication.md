@@ -5559,3 +5559,73 @@ This change is confined to a single line in `apps/web/src/app/admin/digest/page.
 **Reviewer**: APPROVE: The Executor's proposed edit directly addresses a critical security vulnerability identified by the Scanner. Removing the hardcoded `?secret=admin` query parameter from the client-side API call is essential for preventing authentication bypass. The search block is an exact match, the replacement is syntactically correct and functional, and the change is highly valuable for the repository's security posture. This aligns perfectly with the Scanner's plan and previous security-focused efforts on this specific API route, as noted in global memory.
 
 ---
+
+## Cycle 1774509255
+**Scanner**: ## SCANNER ANALYSIS: HOLYKEYZ/git-pulse
+
+### Step 1: Codebase Understanding
+
+This repository, `git-pulse`, appears to be a social platform or content sharing application that integrates with GitHub. Users can post updates, share GitHub repositories, and interact with content, with authentication and repository data fetching handled via GitHub integration.
+
+-   **`packages/ui/package.json`**: This file defines the dependencies and metadata for a shared UI component library within the `git-pulse` monorepo. It lists `react` and `react-dom` as development dependencies, along with styling utilities like `clsx` and `tailwind-merge`, indicating a component-driven UI approach using Tailwind CSS.
+-   **`apps/web/src/app/api/posts/route.ts`**: This is a Next.js API route handler responsible for creating new posts. It manages user authentication (both session-based and API key-based), enforces rate limits, validates post content, extracts hashtags, and fetches additional details for GitHub repository embeds before persisting the post data to a database using Prisma.
+-   **`apps/web/src/app/not-found.tsx`**: This file defines a custom 404 Not Found page for the Next.js application. It provides a user-friendly message and a link to navigate back to the home page, utilizing Tailwind CSS for styling.
+
+The codebase primarily uses **Next.js** (App Router), **TypeScript**, **Tailwind CSS**, and **Prisma** for database interactions. It follows a **monorepo** structure, likely managed with pnpm workspaces, and implements custom **rate limiting** and **authentication** mechanisms.
+
+### Step 2: Deep Analysis
+
+#### `packages/ui/package.json`
+-   **Consistency**: `react` and `react-dom` are listed as `devDependencies`. This is a common pattern for UI libraries in monorepos, where the consuming application (e.g., `apps/web`) provides the primary React dependency. No immediate issues.
+-   **Anti-Hallucination Check**: React version 19.0.0 is present. This is considered correct and stable within the context of this analysis.
+
+#### `apps/web/src/app/api/posts/route.ts`
+-   **Security**:
+    -   **Authentication Bypass**: The API key authentication mechanism relies on a `Bearer gp_` prefix. The current check for "Bearer" is case-sensitive, which violates RFC 6750 for Bearer tokens, stating the "Bearer" scheme is case-insensitive. This could lead to legitimate API keys being rejected if the client sends "bearer" (lowercase).
+    -   **Input Validation**: `content` is checked for existence. Other fields like `type`, `shipDetails`, `images`, `repoUrl` are used directly from the request body without explicit type or content validation beyond their presence. While Prisma provides some type safety, more robust validation (e.g., for `type` against an enum, or `images` as an array of URLs) could prevent malformed data.
+    -   **SSRF Prevention**: The GitHub API call uses a regex to parse `github.com/owner/name` from `repoUrl` and constructs the API endpoint directly to `api.github.com`. This is a good measure against SSRF for the GitHub API.
+-   **Logic**:
+    -   **GitHub API Error Handling**: When fetching repository embed data from GitHub, if the `fetch` response is not `ok` (e.g., 404 Not Found, 403 Forbidden, rate limit exceeded), the error is not logged or handled specifically. The `repoEmbed` simply remains `null`, and the process continues silently. This makes debugging issues with GitHub API integration difficult.
+    -   **User Lookup**: The logic for determining `username` and `userInDb` (session vs. API key) is functional but involves multiple conditional assignments. It correctly optimizes by storing `tokenUser` in `userInDb` to avoid a second database lookup.
+-   **Performance**:
+    -   **Rate Limiting**: A `rateLimit` utility is used, configured for 10 requests per hour per user. This helps prevent abuse but might be too restrictive or have too long an interval for certain user behaviors, potentially impacting user experience. This is a design choice, not a bug.
+    -   **GitHub API Calls**: A `fetch` call is made to the GitHub API for each post that includes a `repoUrl`. Using the `session.user.accessToken` for authenticated requests is a good practice to leverage higher rate limits.
+-   **Architecture**:
+    -   **API Route Structure**: Standard Next.js App Router API route.
+    -   **Error Handling**: Consistent use of `NextResponse.json` with appropriate HTTP status codes for various error conditions.
+-   **Consistency**: Variable naming and import patterns are consistent.
+
+#### `apps/web/src/app/not-found.tsx`
+-   **Consistency**: Uses Tailwind CSS classes, aligning with the likely styling conventions of the application.
+-   **Features**: Provides a basic, user-friendly 404 page.
+
+### Step 3: Pick ONE Improvement
+
+The most valuable improvement is to address the **case-sensitivity issue in the Bearer token authentication check** within `apps/web/src/app/api/posts/route.ts`. This is a **Logic/Security** fix that directly impacts the functionality and robustness of the API key authentication, ensuring adherence to established standards and preventing legitimate programmatic access from being denied due to a common case mismatch.
+
+### Step 4: Write the Executor's Plan
+
+**WHAT to change**:
+Modify the authentication header processing logic for programmatic access to correctly handle the "Bearer" token prefix in a case-insensitive manner, while maintaining the case-sensitivity of the `gp_` prefix for the API key itself.
+
+**WHERE in the file(s)**:
+The change should be made in the `POST` function of `apps/web/src/app/api/posts/route.ts`. Specifically, locate the `if (!username)` block where the `authorization` header is retrieved and processed for API key authentication.
+
+**WHY this matters**:
+The current implementation uses `authHeader?.startsWith("Bearer gp_")`, which performs a case-sensitive comparison for the entire prefix "Bearer gp_". According to RFC 6750, the "Bearer" authentication scheme is case-insensitive. This means that if a client sends an Authorization header with "bearer" (lowercase) followed by a valid `gp_` API key, the current code will incorrectly reject it as unauthorized. Correcting this ensures the API key authentication mechanism is robust, adheres to standard specifications, and prevents legitimate programmatic users from encountering unexpected authentication failures.
+
+**HOW to do it**:
+1.  Navigate to the `POST` function within `apps/web/src/app/api/posts/route.ts`.
+2.  Locate the `if (!username)` block, and inside it, find the line `const authHeader = req.headers.get("authorization");`.
+3.  Identify the subsequent `if` condition that checks `authHeader?.startsWith("Bearer gp_")`.
+4.  Modify this conditional logic. The new logic should first check if `authHeader` exists.
+5.  Then, it should verify that the lowercase version of `authHeader` starts with "bearer " (note the space). This makes the "Bearer" part case-insensitive.
+6.  If this condition is met, proceed to extract the API key by slicing the *original* `authHeader` to remove the "bearer " prefix (which is 7 characters long).
+7.  Add a nested check to ensure that this extracted API key then starts with "gp_" (this check should remain case-sensitive, as `gp_` is part of the API key's format, not the "Bearer" scheme itself).
+8.  Only if both the case-insensitive "bearer " prefix and the case-sensitive "gp_" key prefix are validated should the `prisma.user.findUnique` call be executed with the extracted API key.
+
+**Executor**: {"title": "[SEC] Fix Case-Sensitivity in Bearer Token Authentication", "body": "### Problem / Gap\nThe current implementation of Bearer token authentication in `apps/web/src/app/api/posts/route.ts` is case-sensitive, which may lead to legitimate API keys being rejected if the client sends the 'bearer' prefix in lowercase.\n\n### Solution & Insight\nTo fix this issue, we need to modify the authentication header processing logic to correctly handle the 'Bearer' token prefix in a case-insensitive manner. We will achieve this by first checking if the lowercase version of the authorization header starts with 'bearer ', and then verifying that the extracted API key starts with 'gp_'.\n\n### Impact\nThis change will ensure that the API key authentication mechanism is robust and adheres to standard specifications, preventing legitimate programmatic users from encountering unexpected authentication failures.", "branch_name": "bot/fix-bearer-token-auth-1774509255", "edits": [{"file": "apps/web/src/app/api/posts/route.ts", "search": "if (authHeader?.startsWith(\"Bearer gp_\")) {", "replace": "if (authHeader && authHeader.toLowerCase().startsWith(\"bearer \") && authHeader.slice(7).startsWith(\"gp_\")) {"}]}
+
+**Reviewer**: CORRECT: The Executor's proposed logical change correctly addresses the case-insensitivity requirement for the 'Bearer' token prefix, aligning with RFC 6750 and the Scanner's recommendation. However, the `search` and `replace` blocks in the proposed edit are missing the leading whitespace, which would result in an indentation error in the patched file. This is a recurring issue for this Executor on the `git-pulse` repository.
+
+---
