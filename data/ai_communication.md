@@ -5308,96 +5308,7 @@ This improvement is confined to the `apps/web/src/app/api/image-proxy/route.ts` 
 
 ---
 
-## Cycle 1774492650
-**Scanner**: ## SCANNER ANALYSIS: HOLYKEYZ/git-pulse
-
-### Step 1: Codebase Understanding
-
-This repository, `git-pulse`, functions as a platform for discovering and showcasing GitHub projects and developers. It aims to highlight quality projects based on various metrics beyond mere popularity, fostering community engagement.
-
-*   **`apps/web/src/components/CollabWidget.tsx`**: This component is a client-side React widget that fetches and displays a list of "Developers like you" (collaboration matches). It shows potential collaborators based on shared languages and a similarity score, handling loading and error states gracefully.
-*   **`apps/web/package.json`**: This file defines the dependencies and scripts for the `web` application within the `git-pulse` monorepo. It indicates the use of Next.js (version 15), React (version 19), Prisma for database interaction, NextAuth for authentication, and `@google/generative-ai` for AI-related features.
-*   **`apps/web/src/app/api/admin/digest/route.ts`**: This API route is responsible for generating a weekly digest of the top 10 highest-scored posts. It calculates scores based on factors like repository activity, tech stack, and community engagement, then formats the results into a Twitter-thread-like string. It is intended to be protected by either a `CRON_SECRET` or by an authenticated admin user.
-
-The codebase primarily uses Next.js with its App Router, React for UI, TypeScript for type safety, Prisma as an ORM, and Tailwind CSS for styling. It follows a monorepo structure with `apps/web` and `packages/ui`.
-
-### Step 2: Deep Analysis
-
-**`apps/web/src/components/CollabWidget.tsx`**
-
-*   **Logic**: There is a redundant `if (matches.length === 0) return null;` statement that appears twice consecutively. One instance is sufficient.
-*   **Security**: The component renders `match.username` and `match.avatar` directly. Assuming these values are sanitized and validated by the backend API (`/api/collab`) to prevent XSS vulnerabilities, this should be safe. If the backend does not sanitize, there's a potential risk.
-*   **Consistency**: Follows standard React component patterns and Next.js `Link` usage.
-
-**`apps/web/package.json`**
-
-*   **Consistency**: Standard `package.json` structure for a Next.js application.
-*   **Anti-Hallucination Check**: React 19 and Next 15 are noted as correct versions per global memory. No dependency bumps are allowed.
-
-**`apps/web/src/app/api/admin/digest/route.ts`**
-
-*   **Security / Logic (Critical Bug)**:
-    1.  **Missing `auth` import**: The `auth()` function is used within the authentication logic (`!auth().user.isAdmin`) but is not imported or defined in the file. This will lead to a `ReferenceError` at runtime, causing the API route to crash if the `secret` parameter is incorrect or missing.
-    2.  **Flawed Authentication Logic**: The current two `if` statements for authentication are logically incorrect and redundant.
-        ```typescript
-        if (secret !== process.env.CRON_SECRET && !auth().user.isAdmin) {
-          return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
-        if (secret !== process.env.CRON_SECRET) {
-          return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
-        ```
-        The second `if` condition effectively overrides the first, meaning if the `secret` is incorrect or missing, the route will always return `401 Unauthorized` *without* checking if the user is an authenticated administrator. This prevents legitimate admin users from accessing the digest via the UI if the `secret` is not present, which is a denial of service for admin functionality and a direct contradiction of the stated intent ("also accessible from the admin ui authenticated route"). The intended logic is "secret is correct OR user is admin".
-*   **Architecture**: The `dynamic = "force-dynamic"` export is appropriate for a route that generates dynamic content.
-*   **Performance**: Fetching 100 posts and then sorting/slicing to 10 is a reasonable approach for this digest generation.
-*   **Consistency**: Uses Prisma for database access and standard Next.js API route structure.
-
-### Step 3: Pick ONE Improvement
-
-The most critical issue is the combination of the missing `auth` import and the flawed authentication logic in `apps/web/src/app/api/admin/digest/route.ts`. This represents a severe bug that causes runtime errors and prevents legitimate admin access, making the API route non-functional for its intended purpose. Fixing this addresses both a critical bug and a security vulnerability.
-
-### Step 4: Write the Executor's Plan
-
-**WHAT** to change:
-The authentication mechanism within the `GET` function of the admin digest API route needs to be corrected. This involves adding the necessary import for the `auth` function (from `next-auth`) and then refactoring the authorization checks into a single, logically sound conditional statement. The goal is to grant access if either the `CRON_SECRET` query parameter is valid OR the request comes from an authenticated user who has administrator privileges.
-
-**WHERE** in the file(s):
-The changes will be made exclusively in `apps/web/src/app/api/admin/digest/route.ts`.
-Specifically, an import statement will be added at the top of the file, and the existing two `if` statements that handle authentication will be replaced within the `GET` function.
-
-**WHY** this matters:
-The current implementation has two major flaws:
-1.  **Runtime Error**: The `auth()` function is called without being imported, which will cause a `ReferenceError` and crash the API route if the `secret` query parameter is not provided or is incorrect. This makes the route unstable and unusable under common conditions.
-2.  **Authentication Bypass / Denial of Service**: The existing `if` conditions are logically incorrect. They prevent authenticated administrators from accessing the digest route if the `CRON_SECRET` is missing or invalid. This contradicts the stated purpose of the route, which should allow access via either the secret or admin authentication, and effectively creates a denial of service for legitimate admin users. Correcting this ensures the route functions as intended and is properly secured.
-
-**HOW** to do it:
-1.  At the top of the `apps/web/src/app/api/admin/digest/route.ts` file, add an import statement for the `auth` function. This import should be `import { auth } from "@/lib/auth";` or `import { auth } from "next-auth";` depending on the project's `next-auth` configuration. Given the common pattern, `import { auth } from "@/lib/auth";` is a strong candidate if a custom `auth` helper exists, otherwise `import { auth } from "next-auth";` is standard. For this plan, assume `import { auth } from "@/lib/auth";` as it's common to wrap `next-auth` in a lib.
-2.  Locate the two existing authentication `if` statements within the `GET` function:
-    ```typescript
-    if (secret !== process.env.CRON_SECRET && !auth().user.isAdmin) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-    if (secret !== process.env.CRON_SECRET) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-    ```
-3.  Replace these two `if` statements with a single, consolidated authentication check. First, call the `auth()` function to get the session. Then, check if either the `secret` matches `process.env.CRON_SECRET` OR if the retrieved session indicates an authenticated user with `isAdmin` set to true. If neither of these conditions is met, return an unauthorized response. The `auth()` call should be awaited.
-
-    The revised logic should look like this:
-    *   Declare a constant `session` and assign it the awaited result of `auth()`.
-    *   Declare a boolean constant `isAuthenticatedAdmin` that checks if `session` exists, `session.user` exists, and `session.user.isAdmin` is true.
-    *   Introduce a single `if` statement that checks if `secret` is NOT equal to `process.env.CRON_SECRET` AND `isAuthenticatedAdmin` is false. If this combined condition is true, then return `NextResponse.json({ error: 'Unauthorized' }, { status: 401 });`.
-
-**SCOPE**:
-This improvement is a targeted fix within a single file, `apps/web/src/app/api/admin/digest/route.ts`, involving an import statement and a refactor of the authentication conditional logic.
-
-**Executor**: {"title": "[SEC] Fix Authentication Logic in Admin Digest API Route", "body": "### Problem / Gap\nThe current authentication mechanism in the admin digest API route has two critical issues: a missing import for the `auth` function and flawed authentication logic. This results in a runtime error and prevents legitimate admin access, making the API route non-functional for its intended purpose.\n\n### Solution & Insight\nTo fix this, we need to add the necessary import for the `auth` function and refactor the authentication conditional logic into a single, logically sound statement. This ensures the route functions as intended and is properly secured.\n\n### Impact\nThe measurable benefit of this fix is that it resolves the runtime error, allows legitimate admin access, and ensures the API route functions correctly. This improves the overall security and functionality of the `git-pulse` platform.", "branch_name": "bot/fix-auth-logic-1774492650", "edits": [{"file": "apps/web/src/app/api/admin/digest/route.ts", "search": "if (secret !== process.env.CRON_SECRET && !auth().user.isAdmin) {\n  return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });\n}\nif (secret !== process.env.CRON_SECRET) {\n  return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });\n}", "replace": "import { auth } from '@/lib/auth';\nconst session = await auth();\nconst isAuthenticatedAdmin = session && session.user && session.user.isAdmin;\nif (secret !== process.env.CRON_SECRET && !isAuthenticatedAdmin) {\n  return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });\n}"}]}
-
-**Reviewer**: Reviewer response unparseable
-
----
-
-## Cycle 1774501770
+1774501770
 **Scanner**: ## SCANNER ANALYSIS: HOLYKEYZ/git-pulse
 
 ### Step 1: Codebase Understanding
@@ -5689,5 +5600,95 @@ In Next.js App Router, the `params` object provided to API routes is a standard 
 **Executor**: {"title": "[LOGIC] Correct params type in reactions/route.ts", "body": "### Problem / Gap\nThe `params` object in the `POST` function of `reactions/route.ts` is incorrectly typed as `Promise<{id: string;}>`, leading to unnecessary `await` usage and potential inconsistencies with other API routes.\n\n### Solution & Insight\nCorrect the type annotation of `params` to a plain object `{id: string;}` and remove the redundant `await` keyword when destructuring `postId` from `params`. This ensures semantic correctness, improves code clarity, and maintains consistency across the application's API layer.\n\n### Impact\nThis change improves the accuracy of type annotations, reduces unnecessary operations, and enhances code readability. It also prevents potential issues that could arise from incorrect typing and awaits on non-Promise objects.", "branch_name": "bot/fix-params-type-1774522503", "edits": [{"file": "apps/web/src/app/api/posts/[id]/reactions/route.ts", "search": "export async function POST(req: Request, { params }: {params: Promise<{id: string;}>;}) {\n  const session = await auth();\n  if (!session?.user?.login) {\n    return NextResponse.json({ error: \"Unauthorized\" }, { status: 401 });\n  }\n\n  try {\n    const { id: postId } = await params;\n", "replace": "export async function POST(req: Request, { params }: {params: {id: string;};}) {\n  const session = await auth();\n  if (!session?.user?.login) {\n    return NextResponse.json({ error: \"Unauthorized\" }, { status: 401 });\n  }\n\n  try {\n    const { id: postId } = params;\n"}]}
 
 **Reviewer**: APPROVE: The Executor correctly identified and fixed the incorrect type definition and redundant `await` usage for the `params` object in the Next.js App Router API route. This change aligns the code with Next.js conventions, improves type accuracy, and maintains consistency within the codebase, as noted by the Scanner. The search block is an exact match, and the replacement is functionally correct and valuable.
+
+---
+
+## Cycle 1774531413
+**Scanner**: ## SCANNER ANALYSIS: HOLYKEYZ/git-pulse
+
+### Step 1: Codebase Understanding
+
+*   **What does this repository do?**
+    `git-pulse` is a social networking platform built on top of GitHub, designed to allow developers to share project updates ("ships"), engage with their network, and visualize activity from their GitHub profiles.
+
+*   **What does `packages/ui/package.json` do within the repo?**
+    This file defines the `ui` package, which serves as a shared component library or utility package within the monorepo. It lists its metadata, dependencies (`clsx`, `tailwind-merge`), and development dependencies (`typescript`, `react`, `react-dom`).
+
+*   **What does `apps/web/src/app/layout.tsx` do within the repo?**
+    This file establishes the root layout for the Next.js application. It configures global metadata for SEO and PWA support, imports global styles, and structures the main page layout with components like a `Sidebar`, `BottomNav`, and `ThemeProvider`. It also handles initial user authentication to determine navigation visibility.
+
+*   **What does `apps/web/src/app/profile/[username]/repos/page.tsx` do within the repo?**
+    This file is a Next.js server component responsible for displaying a user's GitHub repositories. It fetches repository data for a given username, handles potential errors during the fetch, extracts unique languages for filtering, and renders each repository using a `RepoCard` component. It also provides conditional messages based on whether repositories are found or if the user needs to sign in.
+
+*   **What patterns, frameworks, or conventions does the codebase use?**
+    The codebase utilizes the Next.js App Router with React Server Components for data fetching and rendering. It employs TypeScript for type safety, Tailwind CSS for styling, and a monorepo structure managed by pnpm. Authentication is handled via `next-auth` or a similar library, and it integrates with the GitHub API.
+
+### Step 2: Deep Analysis
+
+*   **Security**:
+    *   In `apps/web/src/app/profile/[username]/repos/page.tsx`, the `username` from `params` is passed to `getGitHubAllRepos`. While GitHub usernames are generally restricted, ensuring proper encoding or validation within `getGitHubAllRepos` is crucial to prevent potential injection if the username were ever used in a less controlled context (e.g., direct database query or unescaped HTML rendering). The `RepoCard` component's URL validation (as per global memory) mitigates a potential open redirect risk.
+    *   In `apps/web/src/app/layout.tsx`, hardcoded paths for `manifest.json` and icons are generally safe for static assets but highlight a pattern where dynamic, user-controlled paths would require careful validation.
+
+*   **Logic**:
+    *   In `apps/web/src/app/profile/[username]/repos/page.tsx`, the `try...catch` block for `getGitHubAllRepos` logs an error but then proceeds to display "No public repositories found." if `repos.length` is zero. This creates an **ambiguous user experience**: the user cannot distinguish between a genuine lack of repositories and a failure to fetch them due to an API error or network issue. This is a significant logic flaw in user feedback.
+    *   The conditional rendering for `repos.length === 0` correctly differentiates between signed-in users and guests.
+
+*   **Performance**:
+    *   In `apps/web/src/app/layout.tsx`, the `auth()` call is awaited, which means the entire root layout waits for session data. This is standard for server components requiring authentication but could impact initial load time if `auth()` is slow. `Suspense` for the `Sidebar` is a good practice to prevent blocking the main content.
+    *   In `apps/web/src/app/profile/[username]/repos/page.tsx`, `getGitHubAllRepos` fetches a limited number of repositories (30). For users with many repositories, this implies a missing pagination feature, which could be a performance bottleneck if all repos were fetched at once, or a feature gap if only a subset is shown. The current approach avoids over-fetching.
+
+*   **Architecture**:
+    *   The codebase demonstrates good separation of concerns, with `layout.tsx` handling global structure and `page.tsx` components managing specific routes and data fetching. Utility functions like `getGitHubAllRepos` are correctly abstracted.
+    *   The `LANGUAGE_COLORS` object in `repos/page.tsx` is localized. If these colors were used across multiple components, moving them to a shared constants file would improve architectural consistency.
+
+*   **Features**:
+    *   In `apps/web/src/app/profile/[username]/repos/page.tsx`, the lack of pagination for repositories is a missing feature. While 30 repos is a reasonable default, users with more repos will not see their full list.
+    *   The language filter chips are a good feature, but there's no interactive filtering mechanism implemented yet, only display.
+
+*   **Testing**:
+    *   The `try...catch` block in `repos/page.tsx` provides basic error handling, but the lack of distinct error messages makes it harder to verify error paths from a user perspective. Comprehensive testing would involve mocking API failures to ensure correct error display.
+
+*   **DX (Developer Experience)**:
+    *   The `try...catch` block in `repos/page.tsx` is written very compactly on a single line, which, while functional, could be expanded for improved readability and maintainability.
+    *   The `LANGUAGE_COLORS` object is defined inline. For larger applications, centralizing such constants is often preferred.
+
+*   **Consistency**:
+    *   Consistent use of Tailwind CSS classes and Next.js conventions.
+    *   TypeScript usage is consistent across files.
+
+*   **Dead Code**: None apparent in the provided snippets.
+
+### Step 3: Pick ONE Improvement
+
+The most valuable improvement is to address the **ambiguous error message when fetching repositories fails** in `apps/web/src/app/profile/[username]/repos/page.tsx`. This is a critical logic and user experience flaw, as it misinforms the user about the state of their repositories. Distinguishing between "no repos found" and "failed to load repos" is essential for clarity and debugging.
+
+### Step 4: Write the Executor's Plan
+
+**WHAT**:
+The current implementation in `apps/web/src/app/profile/[username]/repos/page.tsx` displays the same message ("No public repositories found.") whether a user genuinely has no repositories or if an error occurred while trying to fetch them from the GitHub API. This ambiguity should be resolved by introducing a state variable to track if an error occurred during the API call. If an error occurred, a distinct error message should be displayed to the user, clearly indicating a loading failure.
+
+**WHERE**:
+The change will primarily be within the `ReposPage` component in the file `apps/web/src/app/profile/[username]/repos/page.tsx`. Specifically, modifications will be made to the data fetching logic and the conditional rendering block that handles the display of messages when no repositories are present.
+
+**WHY**:
+Providing a clear and distinct error message when repository data fetching fails significantly improves the user experience and aids in debugging. Users will understand if there's a temporary issue with the service or the GitHub API rather than assuming they simply have no public repositories. This prevents confusion, provides more accurate feedback, and addresses a logic flaw where different underlying conditions lead to the same user-facing message.
+
+**HOW**:
+1.  Inside the `ReposPage` component, declare a new boolean variable, for example, `hasError`, and initialize it to `false`.
+2.  Locate the `try...catch` block that surrounds the `getGitHubAllRepos` function call.
+3.  Within the `catch` block, after `console.error('Error fetching repositories:', error);`, add a line to set `hasError` to `true`.
+4.  Locate the conditional rendering block at the end of the component that checks `repos.length === 0`.
+5.  Modify this block to first check the `hasError` variable:
+    *   If `hasError` is `true`, render a new `div` with a message such as "Failed to load repositories. Please try again later."
+    *   If `hasError` is `false`, then proceed with the existing logic to check `token`:
+        *   If `token` exists, display "No public repositories found."
+        *   If `token` does not exist, display "Sign in to view repositories."
+
+**SCOPE**:
+This improvement is entirely contained within the `apps/web/src/app/profile/[username]/repos/page.tsx` file, involving a minor addition of a variable and a restructuring of an existing conditional rendering block.
+
+**Executor**: {"title": "[LOGIC] Distinguish Between No Repositories and Fetch Error", "body": "### Problem / Gap\nThe current implementation in `apps/web/src/app/profile/[username]/repos/page.tsx` displays the same message ('No public repositories found.') whether a user genuinely has no repositories or if an error occurred while trying to fetch them from the GitHub API. This ambiguity should be resolved to improve the user experience and aid in debugging.\n\n### Solution & Insight\nIntroduce a state variable `hasError` to track if an error occurred during the API call. If an error occurred, display a distinct error message to the user, clearly indicating a loading failure. This involves modifying the `try...catch` block and the conditional rendering for the 'No public repositories found.' message.\n\n### Impact\nProviding a clear and distinct error message when repository data fetching fails significantly improves the user experience, aids in debugging, and addresses a logic flaw where different underlying conditions lead to the same user-facing message.", "branch_name": "bot/fix-repo-fetch-error-message", "edits": [{"file": "apps/web/src/app/profile/[username]/repos/page.tsx", "search": "let repos = []; try { repos = token ? await getGitHubAllRepos(username, token, 1, 30, \"updated\") : []; } catch (error) { console.error('Error fetching repositories:', error); }\n\n  // collect unique languages for the filter display\n  const languages = [...new Set(repos.map((r) => r.language).filter(Boolean))] as string[];\n\n  return (\n    <div className=\"flex flex-col gap-4 p-4 sm:p-6 animate-slide-up\">\n              {/* header */}\n              <div className=\"flex items-center gap-3\">\n                  <Link href={`/profile/${username}`} className=\"text-git-muted hover:text-git-accent transition-colors\">\n                      <svg height=\"20\" viewBox=\"0 0 16 16\" width=\"20\" className=\"fill-current\">\n                          <path d=\"M7.78 12.53a.75.75 0 0 1-1.06 0L2.47 8.28a.75.75 0 0 1 0-1.06l4.25-4.25a.751.751 0 0 1 1.042.018.751.751 0 0 1 .018 1.042L4.81 7h7.44a.75.75 0 0 1 0 1.5H4.81l2.97 2.97a.75.75 0 0 1 0 1.06Z\" />\n                      </svg>\n                  </Link>\n                  <h1 className=\"text-lg font-semibold text-git-text\">\n                      {username} <span className=\"text-git-muted font-normal\">/ Repositories</span>\n                  </h1>\n              </div>\n\n              {/* language filter chips */}\n              {languages.length > 0 &&\n      <div className=\"flex flex-wrap gap-2\">\n                    {languages.map((lang) =>\n        <span\n          key={lang}\n          className=\"flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-git-border text-[11px] text-git-muted hover:border-git-accent hover:text-git-accent cursor-pointer transition-colors\">\n          \n                            <span\n            className=\"w-2 h-2 rounded-full\"\n            style={{ backgroundColor: LANGUAGE_COLORS[lang] || \"#8b949e\" }} />\n          \n                            {lang}\n                        </span>\n        )}\n                </div>\n      }\n\n              {/* repo count */}\n              <div className=\"text-xs text-git-muted\">\n                  {repos.length} repositories\n              </div>\n\n              {/* repo list */}\n              <div className=\"flex flex-col gap-3 stagger-children\">\n                  {repos.map((repo) =>\n        <RepoCard\n          key={repo.id}\n          name={repo.name}\n          description={repo.description || \"No description provided.\"}\n          language={repo.language || \"\"}\n          languageColor={LANGUAGE_COLORS[repo.language || \"\"] || \"#8b949e\"}\n          stars={repo.stargazers_count}\n          forks={repo.forks_count}\n          lastPush={new Date(repo.pushed_at).toLocaleDateString(\"en-US\", { month: \"short\", day: \"numeric\" })}\n          url={repo.html_url} />\n\n        )}\n              </div>\n\n              {repos.length === 0 && (\n                  token ? (\n                      <div className=\"text-center text-git-muted text-sm py-12\">No public repositories found.</div>\n                  ) : (\n                      <div className=\"text-center text-git-muted text-sm py-12\">Sign in to view repositories.</div>\n                  )\n              )}\n          </div>\n      );", "replace": "let repos = []; let hasError = false; try { repos = token ? await getGitHubAllRepos(username, token, 1, 30, \"updated\") : []; } catch (error) { console.error('Error fetching repositories:', error); hasError = true; }\n\n  // collect unique languages for the filter display\n  const languages = [...new Set(repos.map((r) => r.language).filter(Boolean))] as string[];\n\n  return (\n    <div className=\"flex flex-col gap-4 p-4 sm:p-6 animate-slide-up\">\n              {/* header */}\n              <div className=\"flex items-center gap-3\">\n                  <Link href={`/profile/${username}`} className=\"text-git-muted hover:text-git-accent transition-colors\">\n                      <svg height=\"20\" viewBox=\"0 0 16 16\" width=\"20\" className=\"fill-current\">\n                          <path d=\"M7.78 12.53a.75.75 0 0 1-1.06 0L2.47 8.28a.75.75 0 0 1 0-1.06l4.25-4.25a.751.751 0 0 1 1.042.018.751.751 0 0 1 .018 1.042L4.81 7h7.44a.75.75 0 0 1 0 1.5H4.81l2.97 2.97a.75.75 0 0 1 0 1.06Z\" />\n                      </svg>\n                  </Link>\n                  <h1 className=\"text-lg font-semibold text-git-text\">\n                      {username} <span className=\"text-git-muted font-normal\">/ Repositories</span>\n                  </h1>\n              </div>\n\n              {/* language filter chips */}\n              {languages.length > 0 &&\n      <div className=\"flex flex-wrap gap-2\">\n                    {languages.map((lang) =>\n        <span\n          key={lang}\n          className=\"flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-git-border text-[11px] text-git-muted hover:border-git-accent hover:text-git-accent cursor-pointer transition-colors\">\n          \n                            <span\n            className=\"w-2 h-2 rounded-full\"\n            style={{ backgroundColor: LANGUAGE_COLORS[lang] || \"#8b949e\" }} />\n          \n                            {lang}\n                        </span>\n        )}\n                </div>\n      }\n\n              {/* repo count */}\n              <div className=\"text-xs text-git-muted\">\n                  {repos.length} repositories\n              </div>\n\n              {/* repo list */}\n              <div className=\"flex flex-col gap-3 stagger-children\">\n                  {repos.map((repo) =>\n        <RepoCard\n          key={repo.id}\n          name={repo.name}\n          description={repo.description || \"No description provided.\"}\n          language={repo.language || \"\"}\n          languageColor={LANGUAGE_COLORS[repo.language || \"\"] || \"#8b949e\"}\n          stars={repo.stargazers_count}\n          forks={repo.forks_count}\n          lastPush={new Date(repo.pushed_at).toLocaleDateString(\"en-US\", { month: \"short\", day: \"numeric\" })}\n          url={repo.html_url} />\n\n        )}\n              </div>\n\n              {repos.length === 0 && (\n                  hasError ? (\n                      <div className=\"text-center text-git-muted text-sm py-12\">Failed to load repositories. Please try again later.</div>\n                  ) : token ? (\n                      <div className=\"text-center text-git-muted text-sm py-12\">No public repositories found.</div>\n                  ) : (\n                      <div className=\"text-center text-git-muted text-sm py-12\">Sign in to view repositories.</div>\n                  )\n              )}\n          </div>\n      );"}]}
+
+**Reviewer**: APPROVE: The Executor's proposed edits directly address the identified logic flaw regarding ambiguous error messages. A `hasError` state variable is correctly introduced and utilized to provide distinct feedback to the user when repository fetching fails versus when no repositories are genuinely found. The search block accurately matches the original content, and the replacement code is functional and improves user experience.
 
 ---
