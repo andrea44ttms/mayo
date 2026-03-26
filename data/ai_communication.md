@@ -5468,72 +5468,7 @@ The most valuable improvement is to correct the `target` compiler option in `app
 
 ---
 
-## Cycle 1774522503
-**Scanner**: **SCANNER ANALYSIS: HOLYKEYZ/git-pulse**
-
-### Step 1: Codebase Understanding
-
-*   **What does this repository do?**
-    The `git-pulse` repository appears to be a social media or community platform designed for developers, integrating with GitHub to allow users to follow others, react to posts, and potentially share GitHub-related content.
-
-*   **What does the target file `apps/web/package.json` do within the repo?**
-    This file defines the project metadata, scripts, and dependencies for the `web` application, which is the primary frontend and API layer of the `git-pulse` platform. It lists all the third-party libraries and development tools required for building and running the web application.
-
-*   **What does the target file `apps/web/src/app/api/users/[username]/follow/route.ts` do within the repo?**
-    This file implements a Next.js API route that handles the logic for users to follow or unfollow other users. It manages authentication, prevents self-following, checks for user existence, updates the follow status in the local database, and attempts to synchronize these actions with the GitHub API. It also creates a notification for the followed user.
-
-*   **What does the target file `apps/web/src/app/api/posts/[id]/reactions/route.ts` do within the repo?**
-    This file implements a Next.js API route responsible for handling user reactions (emojis) to posts. It authenticates the user, validates the provided emoji, verifies user existence, and then toggles the reaction status (adding or removing a reaction) in the local database.
-
-*   **What patterns, frameworks, or conventions does the codebase use?**
-    The codebase primarily uses the Next.js App Router for its web application and API routes, leveraging `route.ts` files for API endpoints. It employs NextAuth.js for authentication and session management, and Prisma as its Object-Relational Mapper (ORM) for database interactions. TypeScript is used throughout for strong typing. API responses consistently use `NextResponse.json` with appropriate HTTP status codes, and asynchronous operations are managed with `async/await` and `Promise.all`. External API calls to GitHub are designed with best-effort error handling using `.catch` to prevent local operations from failing due to external issues. The project follows a monorepo structure with `apps/web` and `packages/ui`.
-
-### Step 2: Deep Analysis
-
-*   **Security**: Both `follow/route.ts` and `reactions/route.ts` correctly check for user authentication using `auth()` and `session?.user?.login`. Access tokens are used appropriately for GitHub API calls. Input parameters from the URL (`params`) are generally safe, and the `emoji` from the request body is validated for presence. No obvious hardcoded secrets or injection vulnerabilities were found in the analyzed files.
-*   **Logic**:
-    *   In `follow/route.ts`, checks for self-following and user existence are correctly implemented. The logic for toggling follow status (create/delete) and synchronizing with GitHub is sound, with `Promise.all` used for concurrency and `.catch` for resilience against GitHub API failures. Notification creation is fire-and-forget, which is suitable.
-    *   In `reactions/route.ts`, the `emoji` presence is validated, and user existence is checked. The logic for toggling reactions (create/delete) is correct.
-    *   **Inconsistency/Potential Bug**: In `apps/web/src/app/api/posts/[id]/reactions/route.ts`, the `params` object in the `POST` function signature is typed as `Promise<{id: string;}>`. This is incorrect for Next.js App Router, where `params` is a plain object. Consequently, the `await params` call is unnecessary and semantically incorrect. This contrasts with `apps/web/src/app/api/users/[username]/follow/route.ts` which correctly types `params` as a plain object.
-*   **Performance**: Both `follow/route.ts` and `reactions/route.ts` perform `prisma.user.findUnique` to retrieve the internal database user ID based on the `session.user.login`. While this is necessary if the session only provides the GitHub username and not the internal database ID, it represents an additional database query. `Promise.all` is used effectively where concurrent operations are possible (e.g., DB update and GitHub API call).
-*   **Architecture**: Consistent use of `NextResponse.json` and `try/catch` blocks for error handling. `dynamic = "force-dynamic"` is correctly applied to prevent caching of these API routes.
-*   **Features**:
-    *   Neither route implements rate limiting, which could be a missing feature for preventing abuse (e.g., rapid follow/unfollow or reaction spam).
-    *   `reactions/route.ts` does not create a notification for the post owner when a reaction is added, which might be a desired feature for user engagement.
-*   **Testing**: The current analysis is static; no explicit tests were reviewed. Implicit validation is present for user input (emoji presence) and existence checks. Error paths are handled with `try/catch`.
-*   **DX (Developer Experience)**: The code is generally clear and follows common Next.js and TypeScript patterns. The `package.json` is standard.
-*   **Consistency**: The primary inconsistency found is the `params` type definition between the `follow` and `reactions` API routes. Naming conventions and import patterns are generally consistent.
-*   **Dead Code**: No obvious dead code was identified in the provided files.
-
-### Step 3: Pick ONE Improvement
-
-The most valuable improvement is to correct the incorrect type definition and usage of the `params` object in `apps/web/src/app/api/posts/[id]/reactions/route.ts`. This is a direct logical and type error that introduces inconsistency and unnecessary operations, making it a high-priority fix.
-
-### Step 4: Write the Executor's Plan
-
-**WHAT**
-The Executor should modify the `POST` function in `apps/web/src/app/api/posts/[id]/reactions/route.ts` to correctly type the `params` argument as a plain object and remove the redundant `await` keyword when destructuring `postId` from `params`.
-
-**WHERE**
-The changes are located in the file `apps/web/src/app/api/posts/[id]/reactions/route.ts`.
-Specifically, the `POST` function signature and the line within the `try` block where `postId` is extracted.
-
-**WHY**
-In Next.js App Router, the `params` object provided to API routes is a standard JavaScript object containing dynamic route segments, not a Promise. The current type annotation `Promise<{id: string;}>` is incorrect and leads to an unnecessary `await params` call. While `await`ing a non-Promise object does not typically cause a runtime error (it resolves immediately to the object itself), it is semantically incorrect, adds a negligible but unnecessary operation, and creates an inconsistency with other API routes in the codebase (such as `apps/web/src/app/api/users/[username]/follow/route.ts`) that correctly type `params` as a plain object. Correcting this improves type accuracy, code clarity, and maintains consistency across the application's API layer.
-
-**HOW**
-1.  Locate the `POST` asynchronous function definition in `apps/web/src/app/api/posts/[id]/reactions/route.ts`.
-2.  Within the function signature, change the type annotation for the `params` argument from `Promise<{id: string;}>` to `{id: string;}`.
-3.  Inside the `try` block of the `POST` function, find the line where `postId` is destructured from `params`. This line currently reads `const { id: postId } = await params;`.
-4.  Remove the `await` keyword from this line, so it becomes `const { id: postId } = params;`.
-
-**Executor**: {"title": "[LOGIC] Correct params type in reactions/route.ts", "body": "### Problem / Gap\nThe `params` object in the `POST` function of `reactions/route.ts` is incorrectly typed as `Promise<{id: string;}>`, leading to unnecessary `await` usage and potential inconsistencies with other API routes.\n\n### Solution & Insight\nCorrect the type annotation of `params` to a plain object `{id: string;}` and remove the redundant `await` keyword when destructuring `postId` from `params`. This ensures semantic correctness, improves code clarity, and maintains consistency across the application's API layer.\n\n### Impact\nThis change improves the accuracy of type annotations, reduces unnecessary operations, and enhances code readability. It also prevents potential issues that could arise from incorrect typing and awaits on non-Promise objects.", "branch_name": "bot/fix-params-type-1774522503", "edits": [{"file": "apps/web/src/app/api/posts/[id]/reactions/route.ts", "search": "export async function POST(req: Request, { params }: {params: Promise<{id: string;}>;}) {\n  const session = await auth();\n  if (!session?.user?.login) {\n    return NextResponse.json({ error: \"Unauthorized\" }, { status: 401 });\n  }\n\n  try {\n    const { id: postId } = await params;\n", "replace": "export async function POST(req: Request, { params }: {params: {id: string;};}) {\n  const session = await auth();\n  if (!session?.user?.login) {\n    return NextResponse.json({ error: \"Unauthorized\" }, { status: 401 });\n  }\n\n  try {\n    const { id: postId } = params;\n"}]}
-
-**Reviewer**: APPROVE: The Executor correctly identified and fixed the incorrect type definition and redundant `await` usage for the `params` object in the Next.js App Router API route. This change aligns the code with Next.js conventions, improves type accuracy, and maintains consistency within the codebase, as noted by the Scanner. The search block is an exact match, and the replacement is functionally correct and valuable.
-
----
-
-## Cycle 1774531413
+1774531413
 **Scanner**: ## SCANNER ANALYSIS: HOLYKEYZ/git-pulse
 
 ### Step 1: Codebase Understanding
@@ -5850,5 +5785,69 @@ The most impactful improvement is to implement **pagination for the repositories
 **Executor**: {"title": "[FEAT] Implement Server-Side Pagination for Repositories", "body": "### Problem / Gap\nThe current implementation of the repositories page only displays the first 30 repositories for a user, without any option to view more. This limitation prevents users from accessing their full list of repositories.\n\n### Solution & Insight\nTo address this issue, we will implement server-side pagination. This involves modifying the `ReposPage` component to accept pagination parameters (`page` and `per_page`) from the URL query string, and then using these parameters to fetch the appropriate set of repositories from the GitHub API. We will also add pagination controls to the UI, allowing users to navigate between pages of repositories.\n\n### Impact\nThis feature will significantly enhance the user experience by providing access to all of a user's repositories, not just the first 30. It will also improve the scalability of the application by fetching data in manageable chunks.", "branch_name": "bot/upgrade-1774552261", "edits": [{"file": "apps/web/src/app/profile/[username]/repos/page.tsx", "search": "export default async function ReposPage({ params }: {params: {username: string};}) {", "replace": "export default async function ReposPage({ params, searchParams }: {params: {username: string}; searchParams: { page: string, per_page: string };}) {"}, {"file": "apps/web/src/app/profile/[username]/repos/page.tsx", "search": "let repos = [];", "replace": "let currentPage = searchParams?.page ? parseInt(searchParams.page, 10) : 1;\nlet itemsPerPage = searchParams?.per_page ? parseInt(searchParams.per_page, 10) : 30;\nlet repos = [];"}, {"file": "apps/web/src/app/profile/[username]/repos/page.tsx", "search": "repos = token ? await getGitHubAllRepos(username, token, 1, 30, \"updated\") : [];", "replace": "repos = token ? await getGitHubAllRepos(username, token, currentPage, itemsPerPage, \"updated\") : [];"}, {"file": "apps/web/src/app/profile/[username]/repos/page.tsx", "search": "</div>\n              {repos.length === 0 && (\n                  hasError ? (\n                      <div className=\"text-center text-git-muted text-sm py-12\">Failed to load repositories. Please try again later.</div>\n                  ) : token ? (\n                      <div className=\"text-center text-git-muted text-sm py-12\">No public repositories found.</div>\n                  ) : (\n                      <div className=\"text-center text-git-muted text-sm py-12\">Sign in to view repositories.</div>\n                  )\n              )}", "replace": "</div>\n              {repos.length === 0 && (\n                  hasError ? (\n                      <div className=\"text-center text-git-muted text-sm py-12\">Failed to load repositories. Please try again later.</div>\n                  ) : token ? (\n                      currentPage === 1 ? (\n                          <div className=\"text-center text-git-muted text-sm py-12\">No public repositories found.</div>\n                      ) : (\n                          <div className=\"text-center text-git-muted text-sm py-12\">No more repositories found.</div>\n                      )\n                  ) : (\n                      <div className=\"text-center text-git-muted text-sm py-12\">Sign in to view repositories.</div>\n                  )\n              )}\n              {(repos.length > 0 && itemsPerPage === repos.length) && (\n                  <div className=\"flex justify-center mt-4\">\n                      <Link href={`/profile/${username}/repos?page=${currentPage + 1}&per_page=${itemsPerPage}`} className=\"text-git-accent hover:text-git-accent-hover transition-colors\">Next</Link>\n                  </div>\n              )}\n              {currentPage > 1 && (\n                  <div className=\"flex justify-center mb-4\">\n                      <Link href={`/profile/${username}/repos?page=${currentPage - 1}&per_page=${itemsPerPage}`} className=\"text-git-accent hover:text-git-accent-hover transition-colors\">Previous</Link>\n                  </div>\n              )}"}]}
 
 **Reviewer**: REJECTED x2: The overall approach to pagination is correct and well-aligned with the plan. However, please review the 'ACTUAL DIFF PREVIEW' for the last edit in `apps/web/src/app/profile/[username]/repos/page.tsx`. It shows an extra `)}` right before the final `</div>` of the page component. This will cause a syntax error. Ensure that the final patched code does not contain this extraneous closing brace.
+
+---
+
+## Cycle 1774557552
+**Scanner**: ## SCANNER ANALYSIS: HOLYKEYZ/git-pulse
+
+### Step 1: Codebase Understanding
+
+This repository, `git-pulse`, appears to be a social media-like platform that aggregates and displays GitHub activity, alongside user-generated content. It aims to provide a "smart feed" of relevant GitHub events and posts, allowing users to follow others and interact with content.
+
+The target files play the following roles:
+*   `apps/web/package.json`: This file defines the core web application's dependencies, scripts, and metadata. It indicates a Next.js 15 project using React 19, NextAuth 5 (beta), Prisma, and Tailwind CSS.
+*   `apps/web/src/app/page.tsx`: This is the main home page component for the web application. It's responsible for fetching GitHub events, filtering out "noise" (bots, minor events), mapping these events into a standardized post format, fetching user-created posts from a database, calculating an algorithmic score for each post, and then combining and displaying them in a feed. It implements the core "smart feed" logic.
+*   `apps/web/src/components/FollowButton.tsx`: This is a client-side React component that provides the functionality for users to follow or unfollow other users. It manages its own state for following status and loading, and interacts with a backend API endpoint to toggle the follow status.
+
+The codebase primarily uses Next.js (App Router), TypeScript, Prisma for ORM, NextAuth for authentication, and Tailwind CSS for styling. It integrates with the GitHub API to fetch user activity and employs custom algorithms for post scoring and filtering.
+
+### Step 2: Deep Analysis
+
+**`apps/web/package.json`**
+*   **Consistency**: The dependencies and devDependencies are well-defined and consistent with a modern Next.js project.
+*   **Anti-Hallucination Check**: The versions for `next`, `react`, `react-dom`, and `next-auth` are `15.0.0`, `19.0.0`, `19.0.0`, and `5.0.0-beta.30` respectively. As per the anti-hallucination rules, these are considered correct and stable; no changes or updates are needed or allowed for dependencies.
+
+**`apps/web/src/app/page.tsx`**
+*   **Logic**:
+    *   The `isWorthShowing` function effectively filters out common bot activities and less significant GitHub events, which is crucial for a "smart feed." The comment thresholds (e.g., `comments >= 40`) are business logic decisions.
+    *   In `mapEventToPost`, GitHub events are mapped to `PostProps`. The `likes` and `comments` fields are hardcoded to `0`. If the platform intends to allow users to interact (like/comment) on these GitHub-derived posts, this is a missing feature or an inconsistency in how interactions are displayed. If interactions are only for user-created posts, this is acceptable but could be clarified.
+    *   The `mapPrismaPostToProps` function calculates an algorithmic score for user-created posts. It attempts to access `p.author.statusEmoji` but `statusEmoji` is not included in the `prisma.post.findMany` query's `include: { author: true }`. This means `p.author.statusEmoji` will always be `undefined`, potentially leading to incorrect UI rendering or runtime errors if `PostProps["author"]["statusEmoji"]` is not optional. This is a **logic bug / type inconsistency**.
+    *   **CRITICAL LOGIC BUG**: Within the `HomePage` function, after combining `discoverPosts` and `feedPosts`, the final `feedPosts` array is sorted using `sort((a, b) => (a.score ?? 0) - (b.score ?? 0))`. This sorts the posts in *ascending* order of their score. Given the context of a "smart feed" and the subsequent `take(20)` operation, the intention is almost certainly to display the *highest-scoring* posts first, which requires a *descending* sort order. This bug means the feed is currently showing the least relevant posts.
+*   **Performance**: The use of `Promise.all` for concurrent data fetching is good. Fetching 100 posts from Prisma to then filter and score is a reasonable approach for a small to medium dataset.
+*   **Architecture**: The separation of concerns (data fetching, transformation, UI rendering) is well-maintained. The use of `Suspense` for the `RightSidebar` is a good pattern for managing loading states.
+*   **Features**: The "smart feed" logic is a core feature. The hardcoded `likes: 0` and `comments: 0` for GitHub events could be considered a missing feature if user interaction with these posts is desired.
+*   **DX**: The large comment blocks (`// ═══════════════════════════════════════════════════════════════════════`) are helpful for sectioning the code.
+
+**`apps/web/src/components/FollowButton.tsx`**
+*   **Security**: The component relies on the backend API (`/api/users/${targetUsername}/follow`) to handle authentication, authorization, and input validation for `targetUsername`. Assuming the backend is secure, the client-side component does not introduce direct vulnerabilities.
+*   **Logic**: The `useState` and `handleFollow` logic correctly manages the button's state and interaction with the API.
+*   **Error Handling**: The `try...catch` block is present, but errors are only logged to `console.error`. There is no user-facing feedback if the follow/unfollow action fails, which could lead to a poor user experience.
+*   **Consistency**: Uses standard React patterns and Tailwind CSS classes.
+
+### Step 3: Pick ONE Improvement
+
+From the analysis, the most critical issue is the **incorrect sorting order of posts on the home page**. This is a fundamental logic bug that directly impacts the core user experience and the effectiveness of the "smart feed" algorithm. Users are currently seeing the least relevant content, which undermines the entire purpose of the home page.
+
+### Step 4: Write the Executor's Plan
+
+**WHAT to change:**
+The current implementation for sorting the combined feed posts (`feedPosts`) on the home page sorts them in ascending order based on their calculated score. This needs to be changed to sort in descending order so that posts with higher scores (indicating higher relevance or engagement) appear first in the feed.
+
+**WHERE in the file(s):**
+The change will be made in `apps/web/src/app/page.tsx`, specifically within the `HomePage` asynchronous function. The exact location is the `.sort()` method applied to the `feedPosts` array, which is constructed by combining `discoverPosts` and mapped GitHub events.
+
+**WHY this matters:**
+This is a critical logic bug that directly affects the user experience of the main application feed. The "smart feed" is designed to surface the most relevant and engaging content to the user. By sorting in ascending order, the application is inadvertently displaying the *least* relevant posts at the top of the feed. Correcting this will ensure that the algorithmic scoring is properly utilized, and users are presented with the most valuable content first, aligning with the application's core purpose.
+
+**HOW to do it:**
+1.  Navigate to the `apps/web/src/app/page.tsx` file.
+2.  Locate the `HomePage` asynchronous function.
+3.  Find the section where `feedPosts` is defined and sorted. It will look similar to `feedPosts.sort((a, b) => (a.score ?? 0) - (b.score ?? 0))`.
+4.  Modify the comparison logic within the `.sort()` method. Change `(a.score ?? 0) - (b.score ?? 0)` to `(b.score ?? 0) - (a.score ?? 0)`. This will reverse the sort order, ensuring that posts with higher scores are placed earlier in the array, effectively sorting in descending order.
+
+**Executor**: {"title": "[LOGIC] Fix Incorrect Sorting Order of Posts on Home Page", "body": "### Problem / Gap\nThe current implementation of the home page sorts posts in ascending order of their score, which means the least relevant posts are displayed first. This contradicts the purpose of the 'smart feed' algorithm, which aims to surface the most relevant content.\n\n### Solution & Insight\nTo fix this, we need to modify the sorting logic to sort posts in descending order of their score. This change ensures that posts with higher scores (i.e., more relevant content) are displayed at the top of the feed.\n\n### Impact\nThis change directly improves the user experience by ensuring that the most relevant and engaging content is prominently displayed, aligning with the application's core purpose.", "branch_name": "bot/fix-sorting-order-1774557552", "edits": [{"file": "apps/web/src/app/page.tsx", "search": "feedPosts.sort((a, b) => (a.score ?? 0) - (b.score ?? 0))", "replace": "feedPosts.sort((a, b) => (b.score ?? 0) - (a.score ?? 0))"}]}
+
+**Reviewer**: REJECTED x2: The proposed change is correct and aligns with the Scanner's plan, but it was not applied because the `search` block did not exactly match the content of `apps/web/src/app/page.tsx`. The `ACTUAL DIFF PREVIEW` shows 'NO CHANGES'. Please ensure your `search` block is an *exact, character-for-character match* of the target line in the file, including any leading whitespace or surrounding context if the line itself is not unique. This is a recurring issue for this repository. Double-check the exact line in the file to ensure the search string is precise.
 
 ---
