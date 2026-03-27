@@ -6335,3 +6335,66 @@ The `getContributionDataForYear` function makes an external call to the GitHub A
 **Reviewer**: CORRECT: The Executor's plan to implement caching is valuable and aligns with the Scanner's recommendation. The search block for the logic replacement in `route.ts` is accurate. However, there are two critical issues: 1) The Executor failed to add the necessary `import contributionCache from "@/lib/contributionCache";` statement to `apps/web/src/app/api/github/contributions/route.ts`, which would lead to a `ReferenceError`. 2) The replacement code block in `route.ts` has incorrect indentation, starting at column 0 instead of matching the surrounding 2-space indentation, which would cause linting errors and reduce readability.
 
 ---
+
+## Cycle 1774638404
+**Scanner**: **Step 1: Codebase Understanding**
+
+*   **Repository Purpose**: The `git-pulse` repository appears to be a social media or community platform designed for developers, allowing users to interact, post content, and explore trending topics and repositories, drawing inspiration from GitHub's social features.
+*   **Target Files Purpose**:
+    *   `apps/web/src/app/explore/tags/page.tsx`: This file is a Next.js server component responsible for rendering the "Explore Trending Tags" page. It fetches posts, aggregates hashtags, identifies trending topics, and displays them to users, including a basic caching mechanism.
+    *   `apps/web/tsconfig.json`: This configuration file defines the TypeScript compiler options for the `web` application, ensuring consistent type checking, module resolution, and JSX handling within the project.
+    *   `apps/web/src/components/FollowButton.tsx`: This is a React client component that provides interactive functionality for users to follow or unfollow other users. It manages UI state (following status, loading) and communicates with a backend API route to toggle the follow relationship.
+*   **Patterns, Frameworks, Conventions**: The codebase utilizes Next.js for server-side rendering and routing, React for UI components, TypeScript for type safety, Tailwind CSS for styling, and Prisma for database interactions. It follows a monorepo structure and uses Next.js API routes for backend interactions. A simple in-memory LRU cache is employed for specific data.
+
+**Step 2: Deep Analysis**
+
+*   **Security**:
+    *   `apps/web/src/app/explore/tags/page.tsx`: Hashtags are user-generated. While `tag.replace('#', '')` is used for URL paths, ensuring robust input sanitization for hashtags when they are initially saved to the database is crucial to prevent XSS or other injection vulnerabilities if these tags are rendered in different contexts without proper encoding. Assuming this is handled at the input stage.
+    *   `apps/web/src/components/FollowButton.tsx`: The `targetUsername` is used in a URL path segment. Server-side validation of this username in the API route is essential to prevent path traversal or other URL manipulation attacks. The use of a `POST` request for state-changing operations is good practice against simple CSRF.
+*   **Logic**:
+    *   `apps/web/src/app/explore/tags/page.tsx`: The logic for aggregating tag counts, sorting, and slicing the top 50 is correct. The conditional rendering for "No trending tags yet" and the "Trending" badge for the top 3 tags are also correctly implemented. However, the placement of the `LRU` cache instantiation is a critical logical flaw (detailed under Performance).
+    *   `apps/web/src/components/FollowButton.tsx`: The state management for `isFollowing` and `isLoading` is correctly handled. The `handleFollow` function correctly updates the state based on the API response.
+*   **Performance**:
+    *   `apps/web/src/app/explore/tags/page.tsx`: **CRITICAL ISSUE**: The `LRU` cache instance (`const cache = new LRU(...)`) is initialized *inside* the `TagsPage` server component function. In Next.js server components, this function runs on every request. Consequently, a *new* cache instance is created for every incoming request, completely defeating the purpose of caching. The cache never persists data between requests, leading to redundant database queries and tag aggregation on every page load, despite the intended 5-minute TTL. This is a significant performance bottleneck and resource waste.
+    *   The database query `prisma.post.findMany({ select: { hashtags: true } })` fetches all posts to extract hashtags. While the comment acknowledges that a materialized view would be better for production scale, the immediate performance issue is the ineffective caching.
+*   **Architecture**:
+    *   `apps/web/src/app/explore/tags/page.tsx`: The architectural intent of using an LRU cache is good, but its implementation as a local variable within a server component function is an architectural misstep for a shared, persistent cache.
+    *   The project generally follows a clean Next.js architecture with clear separation of concerns (pages, components, API routes).
+*   **Features**:
+    *   `apps/web/src/app/explore/tags/page.tsx`: The page provides core trending tag functionality. No immediate missing features within its current scope.
+    *   `apps/web/src/components/FollowButton.tsx`: Basic follow/unfollow is present. Could be enhanced with optimistic UI updates for a smoother user experience, but current functionality is sound.
+*   **Testing**: No explicit test files were provided in the context for these specific components. The `FollowButton`'s error handling only logs to console, without user feedback, which might be a minor UX/testing gap for error paths.
+*   **DX (Developer Experience)**: The caching issue in `TagsPage` is a common pitfall for developers new to server components and could lead to confusion about why performance isn't improving as expected.
+*   **Consistency**: Naming conventions, import patterns, and styling (Tailwind CSS) appear consistent across the analyzed files. The `tsconfig.json` extends the root config, promoting consistency.
+*   **Dead Code**: No dead code was identified in the provided files.
+
+**Step 3: Pick ONE Improvement**
+
+The single most valuable improvement is to fix the **ineffective LRU cache implementation** in `apps/web/src/app/explore/tags/page.tsx`. This is a critical performance bug and a logical error that directly impacts the efficiency and scalability of the trending tags feature. It falls under the highest priority categories: "Bugs, security flaws, and broken logic" and "Performance problems".
+
+**Step 4: Write the Executor's Plan**
+
+**WHAT** to change:
+The `LRU` cache instance for trending tags in `apps/web/src/app/explore/tags/page.tsx` is currently initialized inside the `TagsPage` server component function. This prevents the cache from persisting data across multiple user requests, rendering it completely ineffective. The change involves relocating the cache instantiation to the module level so that it is created only once when the module loads and can serve subsequent requests.
+
+**WHERE** in the file(s):
+The modification will occur in `apps/web/src/app/explore/tags/page.tsx`. Specifically, the line `const cache = new LRU({ max: 1, ttl: 300000 });` needs to be moved.
+
+**WHY** this matters:
+By defining the `LRU` cache within the `TagsPage` function, a new cache object is created every time a user requests the `/explore/tags` page. This means the cache never stores any data for longer than a single request's lifecycle, forcing the application to perform the full database query and hashtag aggregation on *every* page load. Moving the cache instantiation to the module's top level ensures that a single, persistent cache instance is shared across all requests to that server instance. This will allow the cache to effectively store trending tags for its 5-minute time-to-live, significantly reducing database load, improving response times, and making the caching mechanism functional as intended. This is a crucial performance optimization and a fix for a fundamental logical error in the caching strategy.
+
+**HOW** to do it:
+1.  Open the file `apps/web/src/app/explore/tags/page.tsx`.
+2.  Locate the line `const cache = new LRU({ max: 1, ttl: 300000 });` which is currently found inside the `TagsPage` default export function.
+3.  Cut this line.
+4.  Paste the line at the top level of the module, specifically after the import statements (e.g., `import LRU from 'lru-cache';`) and before the `export const metadata` declaration.
+5.  Ensure no other changes are made to the `cacheKey` variable or the `cache.get` and `cache.set` calls, as they will correctly interact with the now module-scoped and persistent cache instance.
+
+**SCOPE**:
+This improvement is a focused, single-file change within `apps/web/src/app/explore/tags/page.tsx`. It involves relocating a variable declaration to correct a critical performance and logic flaw.
+
+**Executor**: {"title": "[PERF] Fix Ineffective LRU Cache in Trending Tags Page", "body": "### Problem / Gap\nThe LRU cache for trending tags is currently instantiated inside the `TagsPage` server component function. This means a new cache is created on every request, rendering the caching mechanism ineffective and causing redundant database queries.\n\n### Solution & Insight\nTo fix this, we relocate the cache instantiation to the module level, ensuring a single, persistent cache instance is shared across all requests. This significantly improves performance by reducing database load and making the caching mechanism functional as intended.\n\n### Impact\nThis change directly impacts the efficiency and scalability of the trending tags feature, reducing the load on the database and improving response times for users.", "branch_name": "bot/performance-1774638404", "edits": [{"file": "apps/web/src/app/explore/tags/page.tsx", "search": "export default async function TagsPage() {\n  // basic aggregation of hashtags\n  // in production, this would be a materialized view or indexed aggregation query\nconst cache = new LRU({ max: 1, ttl: 300000 }); // 5 minutes", "replace": "export default async function TagsPage() {\n  // basic aggregation of hashtags\n  // in production, this would be a materialized view or indexed aggregation query"}, {"file": "apps/web/src/app/explore/tags/page.tsx", "search": "import { prisma } from \"@/lib/prisma\";\nimport Link from \"next/link\";\nimport { Metadata } from \"next\";\nimport LRU from 'lru-cache';", "replace": "import { prisma } from \"@/lib/prisma\";\nimport Link from \"next/link\";\nimport { Metadata } from \"next\";\nimport LRU from 'lru-cache';\nconst cache = new LRU({ max: 1, ttl: 300000 }); // 5 minutes"}]}
+
+**Reviewer**: APPROVE: The Executor has correctly identified and implemented the fix for the critical performance issue in `apps/web/src/app/explore/tags/page.tsx`. The `LRU` cache instantiation has been moved from inside the `TagsPage` function to the module level, ensuring it is created only once and persists across requests. This directly addresses the Scanner's primary concern, making the caching mechanism functional as intended and significantly improving performance by reducing redundant database queries. The search blocks are precise, and the resulting code is syntactically and logically correct.
+
+---
