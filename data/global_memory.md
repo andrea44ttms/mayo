@@ -1,13 +1,6 @@
 # mayo Global Memory & Experience
 
-- *[ARCHIVED] 1 older lessons were archived to preserve focus.*
-- **Repo: git-pulse**: [SEC] Enhance SSRF Prevention in Image Proxy. (Ref: https://github.com/HOLYKEYZ/git-pulse/pull/22) - *Status: MERGED - Joseph approved!*
-- **REJECTED by Reviewer**: Executor failed to match search block due to incorrect escape sequence (`\$`) in template literal within the Authorization header, leading to 'NO CHANGES' for `git-pulse`.
-- **Repo: git-pulse**: [LOGIC] Improve Error Handling in GitHub Repos API Route. (Ref: https://github.com/HOLYKEYZ/git-pulse/pull/23) - *Status: MERGED - Joseph approved!*
-- **Repo: git-pulse**: [LOGIC] Correct Navigation Logic for Discover Link. (Ref: https://github.com/HOLYKEYZ/git-pulse/pull/24) - *Status: MERGED - Joseph approved!*
-- **REJECTED by Reviewer**: Executor's search block matched prompt's original content, but diff preview showed a different original line and a syntactically incorrect replacement, indicating a patching failure due to search block mismatch with the actual file state.
-- **Repo: git-pulse**: [LOGIC] Fix Syntax Error in getGitHubReadme Function. (Ref: https://github.com/HOLYKEYZ/git-pulse/pull/25) - *Status: APPROVED - Joseph liked this!*
-- **Repo: git-pulse**: Opened issue — Clarify Admin Authentication for Digest API Route. (Ref: https://github.com/HOLYKEYZ/git-pulse/issues/26) - *Status: EXECUTED → https://github.com/HOLYKEYZ/git-pulse/pull/31*
+- *[ARCHIVED] 5 older lessons were archived to preserve focus.*
 - **Repo: git-pulse**: [REFACTOR] Upgrade TypeScript Compiler Target to ES2020. (Ref: https://github.com/HOLYKEYZ/git-pulse/pull/27) - *Status: APPROVED - Joseph liked this!*
 - **Repo: git-pulse**: [FEAT] Enhance Post Timestamps with Actual Creation Time. (Ref: https://github.com/HOLYKEYZ/git-pulse/pull/28) - *Status: APPROVED - Joseph liked this!*
 - **Repo: git-pulse**: [LOGIC] Fix Incorrect Type Definition and Await Usage for Params in FollowersPage. (Ref: https://github.com/HOLYKEYZ/git-pulse/pull/29) - *Status: MERGED - Joseph approved!*
