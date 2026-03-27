@@ -6047,77 +6047,7 @@ In Next.js App Router API routes, the `params` object is directly provided as a 
 
 ---
 
-## Cycle 1774623248
-**Scanner**: ## SCANNER ANALYSIS: HOLYKEYZ/git-pulse
-
-### Step 1: Codebase Understanding
-
-This repository, `git-pulse`, functions as a social layer for GitHub, providing a web application to display and interact with user profiles, repositories, and other GitHub-related data. It aims to enhance the social experience around GitHub activities.
-
--   **`apps/web/public/manifest.json`**: This file defines the Progressive Web App (PWA) manifest for the `git-pulse` web application. It provides essential metadata such as the app's name, short name, description, start URL, display mode, theme colors, and icons, enabling the application to be installed on users' home screens and offer an app-like experience.
--   **`apps/web/src/app/not-found.tsx`**: This is a custom 404 Not Found page component for the Next.js application. It is displayed when a user attempts to access a route that does not exist, providing a user-friendly message and a link to return to the home page.
--   **`apps/web/src/components/ProfileTabs.tsx`**: This React component renders a set of navigation tabs (Overview, Repositories, Stars) for a user's profile page. It dynamically generates links based on the active tab and username, displays counts for repositories and stars, and visually indicates the currently active tab.
-
-The codebase primarily uses Next.js as its React framework, leveraging TypeScript for type safety. Styling is handled with Tailwind CSS, often using custom color definitions. It also integrates Primer Octicons for various UI icons. The application structure indicates a monorepo setup with `apps/web` for the main application and `packages/ui` for shared UI components.
-
-### Step 2: Deep Analysis
-
-**`apps/web/public/manifest.json`**
--   **Features/Consistency**: The manifest currently defines three icon sizes (1024x1024, 192x192, 512x512). While functional, a more comprehensive set of icon sizes (e.g., 48x48, 72x72, 96x96, 144x144, 168x168, 256x256) is generally recommended for a robust PWA experience to ensure optimal display across a wider range of devices and screen densities without scaling artifacts. However, a previous PR (`#42`) already addressed "Enhance PWA Manifest with Additional Icon Sizes," suggesting this might be considered sufficiently addressed.
-
-**`apps/web/src/app/not-found.tsx`**
--   **Logic**: The component correctly renders a 404 message and a functional link back to the home page. No logical errors or edge cases are apparent.
--   **Consistency**: Uses custom Tailwind colors (`text-git-text`, `text-git-muted`, `bg-git-green`) consistent with other parts of the application.
--   **Features**: The page is minimal. A minor aesthetic improvement could be adding a relevant illustration or more engaging text, but this is not a critical functional gap.
-
-**`apps/web/src/components/ProfileTabs.tsx`**
--   **Consistency/Architecture/DX**: The component uses a mix of custom Tailwind color classes (e.g., `text-git-text`, `border-git-border/50`) and hardcoded hex color values (e.g., `bg-[#30363d]`, `border-[#f78166]`). This inconsistency makes the styling less maintainable and harder to manage. If the brand's color palette changes, these hardcoded values would need to be manually updated across all files, increasing the risk of inconsistencies. Defining all custom colors in `tailwind.config.ts` would centralize color management and improve developer experience.
--   **Logic**: The conditional rendering for `repoCount` and `starCount` is correct, and the `href` generation logic for tabs is sound. The `starCount` prop being optional is handled appropriately.
--   **Performance**: The component iterates over a small, fixed array of tabs, so performance is not a concern.
--   **Features**: The current tabs (Overview, Repositories, Stars) cover core profile aspects. Depending on future requirements, additional tabs like "Activity," "Followers," or "Following" could be considered, but this is an enhancement rather than a missing core feature.
--   **Accessibility**: The `outline-none` class is used on the `Link` elements. While it removes the default focus outline, which can be a visual preference, it can negatively impact keyboard navigation accessibility. It's generally recommended to provide a custom, visible focus style instead of removing the outline entirely.
-
-### Step 3: Pick ONE Improvement
-
-The most valuable improvement is to **refactor the hardcoded hex color values in `ProfileTabs.tsx` into named custom colors defined in `tailwind.config.ts`**. This addresses a significant consistency and maintainability issue, aligning with existing patterns in the codebase and improving the overall architecture and developer experience.
-
-### Step 4: Write the Executor's Plan
-
-**WHAT**:
-Refactor the hardcoded hex color values used for the active tab border and the repository/star count background in `ProfileTabs.tsx` into named custom colors. These new custom colors will be defined in `tailwind.config.ts` to centralize the application's color palette.
-
-**WHERE**:
-1.  **`apps/web/tailwind.config.ts`**: The `theme.extend.colors` object.
-2.  **`apps/web/src/components/ProfileTabs.tsx`**:
-    *   The `className` string of the `Link` component where the active tab border color is applied.
-    *   The `className` string of the `<span>` elements that display `repoCount` and `starCount`.
-
-**WHY**:
-This change significantly improves the consistency and maintainability of the `git-pulse` codebase. By moving hardcoded hex values into `tailwind.config.ts`, all custom colors are centralized, making it easier to manage the application's theme. This approach reduces redundancy, enhances readability by using semantic color names (e.g., `border-git-tab-active-border` instead of `border-[#f78166]`), and simplifies future updates to the brand's color palette. It aligns with the existing practice of using custom Tailwind colors like `text-git-text` and `bg-git-green`, promoting a more robust design system.
-
-**HOW**:
-1.  **First, modify `apps/web/tailwind.config.ts`**:
-    *   Locate the `theme.extend.colors` object within the configuration file.
-    *   Inside this `colors` object, add two new custom color definitions. If there is an existing `git` object for custom colors (e.g., `git-text`, `git-green`), nest these new colors within it. Otherwise, add them as new top-level custom colors.
-    *   Define `git-tab-active-border` with the hex value `#f78166`.
-    *   Define `git-tab-count-bg` with the hex value `#30363d`.
-
-2.  **Next, modify `apps/web/src/components/ProfileTabs.tsx`**:
-    *   Find the `Link` component within the `TABS.map` function.
-    *   Locate the conditional `className` string that applies the active tab styling.
-    *   Replace the hardcoded `border-[#f78166]` class with `border-git-tab-active-border`.
-    *   Find the `<span>` element that displays the `repoCount`.
-    *   Replace the hardcoded `bg-[#30363d]` class with `bg-git-tab-count-bg`.
-    *   Find the `<span>` element that displays the `starCount`.
-    *   Replace the hardcoded `bg-[#30363d]` class with `bg-git-tab-count-bg`.
-
-**Executor**: {"title": "[REFACTOR] Centralize Custom Colors in Tailwind Config", "body": "### Problem / Gap\nThe `ProfileTabs.tsx` component uses hardcoded hex color values for styling, which can lead to inconsistencies and maintenance issues across the application.\n\n### Solution & Insight\nTo improve maintainability and consistency, we will define these colors in the `tailwind.config.ts` file, allowing for easy management and updates of the application's color palette.\n\n### Impact\nThis change enhances the codebase's consistency, readability, and maintainability by centralizing custom colors and promoting the use of semantic color names.", "branch_name": "bot/upgrade-1774623248", "edits": [{"file": "apps/web/tailwind.config.ts", "search": "theme: {\n  extend: {\n    colors: {\n      // Custom colors\n      git: {\n        text: '#24292f',\n        green: '#2ea043',\n        border: '#30363d',\n      },\n    },\n  },\n};", "replace": "theme: {\n  extend: {\n    colors: {\n      // Custom colors\n      git: {\n        text: '#24292f',\n        green: '#2ea043',\n        border: '#30363d',\n        'tab-active-border': '#f78166',\n        'tab-count-bg': '#30363d',\n      },\n    },\n  },\n};"}, {"file": "apps/web/src/components/ProfileTabs.tsx", "search": "className={`flex items-center gap-2 pb-3 pt-2 text-sm font-medium border-b-[3px] transition-colors whitespace-nowrap outline-none ${\n        isActive\n          ? \"border-[#f78166] text-git-text\"\n          : \"border-transparent text-git-muted hover:text-git-text hover:border-git-border/50\"\n      }`}", "replace": "className={`flex items-center gap-2 pb-3 pt-2 text-sm font-medium border-b-[3px] transition-colors whitespace-nowrap outline-none ${\n        isActive\n          ? \"border-git-tab-active-border text-git-text\"\n          : \"border-transparent text-git-muted hover:text-git-text hover:border-git-border/50\"\n      }`}"}, {"file": "apps/web/src/components/ProfileTabs.tsx", "search": "<span className=\"ml-1 px-1.5 py-0.5 text-xs font-medium bg-[#30363d] rounded-full text-git-muted\">", "replace": "<span className=\"ml-1 px-1.5 py-0.5 text-xs font-medium bg-git-tab-count-bg rounded-full text-git-muted\">"}]}
-
-**Reviewer**: CORRECT: The Executor correctly identified the need to refactor hardcoded colors in `ProfileTabs.tsx` and proposed valid replacements for those files. However, the proposed edit for `tailwind.config.ts` was fundamentally flawed. The search block did not match the original file content, leading to a destructive replacement of the entire `theme` object instead of merely adding new color definitions to the existing `git` object as intended by the Scanner. This would have broken the application's styling. I have corrected the `tailwind.config.ts` edit to precisely insert the new colors without causing destructive changes.
-
----
-
-## Cycle 1774626974
+1774626974
 **Scanner**: ## Codebase Understanding
 
 This repository, `git-pulse`, appears to be a web application designed to interact with GitHub, likely providing enhanced profiles, collaboration features, and possibly a personalized feed or dashboard for developers. It leverages Next.js for the frontend, Prisma for database interactions, and Tailwind CSS for styling.
@@ -6396,5 +6326,79 @@ This improvement is a focused, single-file change within `apps/web/src/app/explo
 **Executor**: {"title": "[PERF] Fix Ineffective LRU Cache in Trending Tags Page", "body": "### Problem / Gap\nThe LRU cache for trending tags is currently instantiated inside the `TagsPage` server component function. This means a new cache is created on every request, rendering the caching mechanism ineffective and causing redundant database queries.\n\n### Solution & Insight\nTo fix this, we relocate the cache instantiation to the module level, ensuring a single, persistent cache instance is shared across all requests. This significantly improves performance by reducing database load and making the caching mechanism functional as intended.\n\n### Impact\nThis change directly impacts the efficiency and scalability of the trending tags feature, reducing the load on the database and improving response times for users.", "branch_name": "bot/performance-1774638404", "edits": [{"file": "apps/web/src/app/explore/tags/page.tsx", "search": "export default async function TagsPage() {\n  // basic aggregation of hashtags\n  // in production, this would be a materialized view or indexed aggregation query\nconst cache = new LRU({ max: 1, ttl: 300000 }); // 5 minutes", "replace": "export default async function TagsPage() {\n  // basic aggregation of hashtags\n  // in production, this would be a materialized view or indexed aggregation query"}, {"file": "apps/web/src/app/explore/tags/page.tsx", "search": "import { prisma } from \"@/lib/prisma\";\nimport Link from \"next/link\";\nimport { Metadata } from \"next\";\nimport LRU from 'lru-cache';", "replace": "import { prisma } from \"@/lib/prisma\";\nimport Link from \"next/link\";\nimport { Metadata } from \"next\";\nimport LRU from 'lru-cache';\nconst cache = new LRU({ max: 1, ttl: 300000 }); // 5 minutes"}]}
 
 **Reviewer**: APPROVE: The Executor has correctly identified and implemented the fix for the critical performance issue in `apps/web/src/app/explore/tags/page.tsx`. The `LRU` cache instantiation has been moved from inside the `TagsPage` function to the module level, ensuring it is created only once and persists across requests. This directly addresses the Scanner's primary concern, making the caching mechanism functional as intended and significantly improving performance by reducing redundant database queries. The search blocks are precise, and the resulting code is syntactically and logically correct.
+
+---
+
+## Cycle 1774644129
+**Scanner**: ## Codebase Understanding
+
+This repository, `HOLYKEYZ/git-pulse`, functions as a social media platform centered around GitHub repositories. Users can create posts, embed repository information, react to content, and explore posts categorized by tags.
+
+The file `apps/web/src/app/explore/tags/[tag]/page.tsx` is a Next.js dynamic route page responsible for displaying a feed of posts associated with a specific tag. It fetches posts from a database, calculates an algorithmic score for each post, sorts them by this score, and renders them using reusable `PostCard` components. It also generates SEO metadata for the tag page.
+
+The file `packages/ui/tsconfig.json` defines the TypeScript configuration for the shared UI component library within the monorepo. It extends the root TypeScript configuration and specifies compiler options relevant to the UI package.
+
+The file `apps/web/src/components/ReactionPicker.tsx` is a client-side React component that provides a user interface for reacting to posts, specifically implementing a "star" reaction with visual feedback and a count display.
+
+The codebase primarily uses Next.js (App Router), React, TypeScript, Prisma for database interaction, and Tailwind CSS for styling. It follows a monorepo structure with `apps/web` for the main application and `packages/ui` for shared components. Utility functions are organized in a `lib` directory.
+
+## Deep Analysis
+
+### `apps/web/src/app/explore/tags/[tag]/page.tsx`
+
+*   **Logic**:
+    *   The `PageProps` interface defines `params` as a `Promise<{tag: string;}>`. While `await params` is used consistently, `params` for a page component is typically a plain object (`{ tag: string }`) rather than a Promise. This is an unusual type definition for a page component's props and could be confusing, though it appears functional in this context.
+    *   The `mapPrismaPostToProps` function uses `p: any` as its parameter type, which reduces type safety. A more specific Prisma type, possibly including the `author`, `_count`, and `repoEmbed` relations, would be beneficial.
+    *   The comment `// reuse the mapper from page.tsx` for `mapPrismaPostToProps` strongly suggests this function is duplicated elsewhere in the codebase (likely `apps/web/src/app/page.tsx`). This is a clear violation of the DRY (Don't Repeat Yourself) principle.
+*   **Performance**:
+    *   The page fetches a maximum of 50 posts (`take: 50`). For very popular tags, this limit means users cannot view all relevant posts.
+    *   The scoring logic runs on every request for the fetched posts. While likely performant enough for 50 posts, if the `take` limit were increased significantly or the scoring algorithm became more complex, this could become a bottleneck.
+*   **Architecture**:
+    *   The `mapPrismaPostToProps` function, being duplicated or intended for reuse, should be extracted into a shared utility file to centralize post mapping logic.
+*   **Features**:
+    *   The page lacks pagination or infinite scrolling for posts. Users can only see the top 50 posts for a given tag, which limits discoverability and user experience for popular tags.
+*   **Consistency**:
+    *   The use of `normalizedTag = `#${rawTag.toLowerCase()}`;` ensures consistent tag matching, which is good.
+
+### `packages/ui/tsconfig.json`
+
+*   **Consistency**: The `target: "ES2020"` aligns with the recent refactor to upgrade the TypeScript compiler target, indicating good consistency across the monorepo. The `extends` and `paths` configurations are standard and promote consistency.
+*   No significant issues found.
+
+### `apps/web/src/components/ReactionPicker.tsx`
+
+*   **Logic**: The component correctly handles the state for starring, displays the count, and provides visual animation feedback. The conditional rendering of SVG paths for starred/unstarred states is correct.
+*   **Consistency**: Uses Tailwind CSS classes, consistent with the rest of the application's styling approach.
+*   No significant issues found.
+
+## Pick ONE Improvement
+
+The most valuable improvement is to address the **code duplication and architectural inconsistency** identified in `apps/web/src/app/explore/tags/[tag]/page.tsx`. The `mapPrismaPostToProps` function is explicitly noted as being reused, implying it exists in multiple places. Centralizing this logic is a fundamental improvement to code maintainability, reduces the risk of inconsistent behavior, and adheres to good software design principles. This is a higher priority than the `PageProps` type clarification or the missing pagination feature, as it fixes an existing architectural flaw rather than adding new functionality or refining a minor type detail.
+
+## Executor's Plan
+
+**WHAT to change:**
+Extract the `mapPrismaPostToProps` function from `apps/web/src/app/explore/tags/[tag]/page.tsx` into a new, shared utility file. This will centralize the logic for transforming Prisma post objects into `PostProps` suitable for the `PostCard` component.
+
+**WHERE in the file(s):**
+1.  Create a new file: `apps/web/src/lib/post-mapper.ts`.
+2.  Modify the existing file: `apps/web/src/app/explore/tags/[tag]/page.tsx`.
+
+**WHY this matters:**
+The comment `// reuse the mapper from page.tsx` indicates that the `mapPrismaPostToProps` function is intended to be shared across different parts of the application, likely with `apps/web/src/app/page.tsx`. Duplicating this logic leads to increased maintenance overhead, as any changes or bug fixes would need to be applied in multiple locations. This also increases the risk of inconsistencies if one instance is updated while another is overlooked. Centralizing this mapping logic improves code organization, maintainability, and adheres to the Don't Repeat Yourself (DRY) principle, making the codebase cleaner and easier to manage.
+
+**HOW to do it:**
+1.  Create a new TypeScript file named `post-mapper.ts` inside the `apps/web/src/lib/` directory.
+2.  Locate the `mapPrismaPostToProps` function definition within `apps/web/src/app/explore/tags/[tag]/page.tsx`. This function starts with `function mapPrismaPostToProps(p: any): PostProps {` and ends before `export default async function TagFeedPage({ params }: PageProps) {`.
+3.  Move the entire `mapPrismaPostToProps` function, including its body, into the newly created `apps/web/src/lib/post-mapper.ts` file.
+4.  In `apps/web/src/lib/post-mapper.ts`, add the necessary import statements that `mapPrismaPostToProps` relies on. Specifically, it will need to import `type PostProps` from `@/components/PostCard`, `calculatePostScore` from `@/lib/algo`, `hasPassedBadge` from `@/lib/badges`, and `getRelativeTime` from `@/lib/utils`.
+5.  Export the `mapPrismaPostToProps` function from `apps/web/src/lib/post-mapper.ts`.
+6.  In `apps/web/src/app/explore/tags/[tag]/page.tsx`, remove the original `mapPrismaPostToProps` function definition.
+7.  Also in `apps/web/src/app/explore/tags/[tag]/page.tsx`, remove the direct imports for `calculatePostScore`, `hasPassedBadge`, and `getRelativeTime`, as these will now be handled within `post-mapper.ts`. The `type PostProps` import from `@/components/PostCard` can also be removed from `page.tsx` if it is only used by the `mapPrismaPostToProps` function.
+8.  Add a new import statement at the top of `apps/web/src/app/explore/tags/[tag]/page.tsx` to import `mapPrismaPostToProps` from the new `apps/web/src/lib/post-mapper.ts` utility file.
+
+**Executor**: {"title": "[REFACTOR] Centralize Post Mapping Logic", "body": "### Problem / Gap\nThe `mapPrismaPostToProps` function in `apps/web/src/app/explore/tags/[tag]/page.tsx` is duplicated and not following the DRY principle, indicating a need for centralization.\n\n### Solution & Insight\nExtract the `mapPrismaPostToProps` function into a new utility file `post-mapper.ts` to centralize the logic for transforming Prisma post objects into `PostProps`. This improves maintainability, reduces the risk of inconsistencies, and adheres to good software design principles.\n\n### Impact\nThis change enhances code organization and maintainability by eliminating duplicated logic, making it easier to update or fix the mapping function in one place.", "branch_name": "bot/centralize-post-mapper-1774644129", "edits": [{"file": "apps/web/src/app/explore/tags/[tag]/page.tsx", "search": "function mapPrismaPostToProps(p: any): PostProps {\n  let score = 0;\n  \n  // calculate algorithmic score for the post\n  if (p.repoEmbed) {\n    const r = p.repoEmbed as Record<string, any>;\n    const daysSincePost = Math.max((Date.now() - p.createdAt.getTime()) / (1000 * 60 * 60 * 24), 1);\n    const pushDate = r.lastPush ? new Date(r.lastPush) : p.createdAt;\n    const daysSincePush = Math.max((Date.now() - pushDate.getTime()) / (1000 * 60 * 60 * 24), 0);\n    \n    score = calculatePostScore({\n      language: r.language,\n      stars: r.stars || 0,\n      forks: r.forks || 0,\n      daysSincePush,\n      hasDescription: !!r.description,\n      daysSincePost\n    });\n  } else {\n    const daysSincePost = Math.max((Date.now() - p.createdAt.getTime()) / (1000 * 60 * 60 * 24), 1);\n    score = 15 / Math.pow(daysSincePost, 1.2);\n    if (p.images && p.images.length > 0) score += 5;\n    if (p.hashtags && p.hashtags.length > 0) score += 2;\n  }\n  \n  return {\n    id: p.id,\n    type: p.type as \"standard\" | \"ship\",\n    author: {\n      username: p.author.username,\n      avatar: p.author.avatar ?? \"\",\n      statusEmoji: p.author.statusEmoji,\n      statusText: p.author.statusText\n    },\n    content: p.content,\n    timestamp: getRelativeTime(p.createdAt),\n    likes: p._count.reactions,\n    comments: p._count.comments,\n    repoEmbed: p.repoEmbed,\n    shipDetails: p.shipDetails,\n    images: p.images,\n    hashtags: p.hashtags,\n    repoUrl: p.repoUrl,\n    score,\n    passedBadge: hasPassedBadge(score)\n  };\n}", "replace": ""}, {"file": "apps/web/src/lib/post-mapper.ts", "search": "", "replace": "import { calculatePostScore } from '@/lib/algo';\nimport { hasPassedBadge } from '@/lib/badges';\nimport { getRelativeTime } from '@/lib/utils';\nimport type { PostProps } from '@/components/PostCard';\n\nexport function mapPrismaPostToProps(p: any): PostProps {\n  let score = 0;\n  \n  // calculate algorithmic score for the post\n  if (p.repoEmbed) {\n    const r = p.repoEmbed as Record<string, any>;\n    const daysSincePost = Math.max((Date.now() - p.createdAt.getTime()) / (1000 * 60 * 60 * 24), 1);\n    const pushDate = r.lastPush ? new Date(r.lastPush) : p.createdAt;\n    const daysSincePush = Math.max((Date.now() - pushDate.getTime()) / (1000 * 60 * 60 * 24), 0);\n    \n    score = calculatePostScore({\n      language: r.language,\n      stars: r.stars || 0,\n      forks: r.forks || 0,\n      daysSincePush,\n      hasDescription: !!r.description,\n      daysSincePost\n    });\n  } else {\n    const daysSincePost = Math.max((Date.now() - p.createdAt.getTime()) / (1000 * 60 * 60 * 24), 1);\n    score = 15 / Math.pow(daysSincePost, 1.2);\n    if (p.images && p.images.length > 0) score += 5;\n    if (p.hashtags && p.hashtags.length > 0) score += 2;\n  }\n  \n  return {\n    id: p.id,\n    type: p.type as \"standard\" | \"ship\",\n    author: {\n      username: p.author.username,\n      avatar: p.author.avatar ?? \"\",\n      statusEmoji: p.author.statusEmoji,\n      statusText: p.author.statusText\n    },\n    content: p.content,\n    timestamp: getRelativeTime(p.createdAt),\n    likes: p._count.reactions,\n    comments: p._count.comments,\n    repoEmbed: p.repoEmbed,\n    shipDetails: p.shipDetails,\n    images: p.images,\n    hashtags: p.hashtags,\n    repoUrl: p.repoUrl,\n    score,\n    passedBadge: hasPassedBadge(score)\n  };\n}"}, {"file": "apps/web/src/app/explore/tags/[tag]/page.tsx", "search": "import { calculatePostScore } from '@/lib/algo';\nimport { hasPassedBadge } from '@/lib/badges';\nimport { getRelativeTime } from '@/lib/utils';", "replace": ""}, {"file": "apps/web/src/app/explore/tags/[tag]/page.tsx", "search": "", "replace": "import { mapPrismaPostToProps } from '@/lib/post-mapper';"}]}
+
+**Reviewer**: CORRECT: The Executor's plan to centralize the `mapPrismaPostToProps` function is sound and directly addresses a code duplication issue identified by the Scanner. However, the proposed edits failed to apply due to common search block mismatches (whitespace and quote differences) and missed a related type import removal in the original file. The intent is correct, but the execution needs precision.
 
 ---
