@@ -6402,3 +6402,63 @@ The comment `// reuse the mapper from page.tsx` indicates that the `mapPrismaPos
 **Reviewer**: CORRECT: The Executor's plan to centralize the `mapPrismaPostToProps` function is sound and directly addresses a code duplication issue identified by the Scanner. However, the proposed edits failed to apply due to common search block mismatches (whitespace and quote differences) and missed a related type import removal in the original file. The intent is correct, but the execution needs precision.
 
 ---
+
+## Cycle 1774650947
+**Scanner**: ## SCANNER ANALYSIS: HOLYKEYZ/git-pulse
+
+### Step 1: Codebase Understanding
+
+*   **Repository Purpose**: The `git-pulse` repository appears to be a web application designed to provide a personalized dashboard or social feed for GitHub users, displaying posts, user profiles, repositories, notifications, and other GitHub-related activities. It aims to offer a more engaging way to interact with GitHub data.
+*   **Target Files Purpose**:
+    *   `pnpm-workspace.yaml`: This file defines the monorepo structure, indicating that `apps/*` and `packages/*` directories contain separate projects managed by pnpm.
+    *   `apps/web/src/components/SearchBar.tsx`: This is a client-side React component that provides a search input field with debounced API calls and a dynamic dropdown for displaying real-time search results across posts, users, and repositories.
+    *   `apps/web/src/lib/cache.ts`: This utility file implements a global LRU (Least Recently Used) cache for API responses, designed to be a singleton in a Next.js server environment. It provides a `withCache` wrapper function to easily cache the results of asynchronous operations.
+*   **Patterns, Frameworks, or Conventions**: The codebase uses Next.js as its React framework, TypeScript for type safety, and pnpm for monorepo management. It leverages client-side data fetching with debouncing for search, and implements a custom LRU cache for server-side API responses. Tailwind CSS is implied by the class naming conventions.
+
+### Step 2: Deep Analysis
+
+*   **Security**:
+    *   `SearchBar.tsx`: Uses `encodeURIComponent` for search queries in API calls and URL navigation, which is good practice for preventing URL injection. External links (`repo.url`) use `target="_blank" rel="noopener noreferrer"` to mitigate tabnabbing. No obvious direct security vulnerabilities in the provided snippets.
+    *   `cache.ts`: No direct security concerns.
+*   **Logic**:
+    *   `SearchBar.tsx`:
+        *   The search debounce logic is correctly implemented to prevent excessive API calls.
+        *   The `query.length < 2` check is a good optimization.
+        *   The "View all repositories" and "View all posts" links are displayed if `results.repos.length > 0` or `results.posts.length > 0` respectively. However, the dropdown *truncates* these lists to `slice(0, 3)`. This means if there are 1, 2, or 3 results, the "View all" link still appears, even though all results are already visible. This creates a redundant and potentially confusing user experience. The "View all" link should only appear if there are *more* results than what is currently displayed (i.e., `length > 3`).
+        *   The "View all users" link does not have this issue, as the user list is not truncated in the dropdown.
+    *   `cache.ts`:
+        *   The singleton pattern for `apiCache` using `globalForCache` is correctly implemented for Next.js server environments.
+        *   The comment `// don't cache null/undefined or empty arrays to avoid poisoning the cache with bad responses` is misleading regarding empty arrays. The actual code `if (result !== null && result !== undefined)` *does* cache empty arrays (`[]`) because an empty array is neither `null` nor `undefined`. Caching empty arrays for "no results" is generally a desirable performance optimization, so the code's behavior is good, but the comment contradicts it, which could lead to future confusion or incorrect "fixes."
+*   **Performance**:
+    *   `SearchBar.tsx`: Debouncing search queries is a good performance practice. The `isLoading` state provides good UX feedback.
+    *   `cache.ts`: The LRU cache with a default TTL is a solid approach for improving API response times and reducing backend load. The current behavior of caching empty arrays (despite the misleading comment) is beneficial for performance, as it avoids repeated API calls for "no results" scenarios.
+*   **Architecture**:
+    *   `SearchBar.tsx`: The component directly handles data fetching. For more complex search logic or shared data fetching, abstracting this into a custom hook or service could improve modularity. The `SearchResult` interface could be moved to a shared `types` file if used elsewhere.
+    *   `cache.ts`: The `withCache` function provides a clean, reusable abstraction for caching, promoting a consistent caching pattern across the application.
+*   **Features**:
+    *   `SearchBar.tsx`: The "View all" links are a good feature, but their conditional rendering for truncated sections needs refinement (as noted in Logic). Keyboard navigation for selecting dropdown results is a common UX enhancement for search bars that is currently missing.
+*   **Testing**: No explicit tests are provided in the context, but both `SearchBar.tsx` (for its various states and interactions) and `cache.ts` (for cache hits/misses, TTL, and eviction) would benefit from unit tests.
+*   **DX (Developer Experience)**:
+    *   `SearchBar.tsx`: The component is well-structured and readable.
+    *   `cache.ts`: The `withCache` function is well-commented, but one comment is misleading (as noted in Logic).
+*   **Consistency**: Naming conventions and use of Tailwind CSS classes appear consistent within the provided files. Import patterns are standard for Next.js/React.
+*   **Dead Code**: No obvious dead code in the provided snippets.
+
+### Step 3: Pick ONE Improvement
+
+The most valuable improvement is to correct the logical inconsistency in the `SearchBar.tsx` component regarding the conditional rendering of "View all" links for truncated search results. This is a direct bug in the user interface logic that affects user experience.
+
+### Step 4: Executor's Plan
+
+*   **WHAT**: Adjust the conditional rendering of the "View all repositories" and "View all posts" links in the search results dropdown.
+*   **WHERE**: In `apps/web/src/components/SearchBar.tsx`, specifically within the `dropdown results` section, locate the `Link` components that display "View all repositories" and "View all posts".
+*   **WHY**: The search results dropdown truncates the display of repositories and posts to the first three items. However, the "View all" links for these categories are currently displayed if there are any results at all (`length > 0`), even if the total number of results is three or fewer. This means the "View all" link appears when all available results are already visible in the dropdown, creating a confusing user experience where clicking the link might not show any *additional* information. To improve logical consistency and user experience, these links should only appear when there are *more* results than what is currently displayed, indicating that there is indeed more to view on the dedicated search page.
+*   **HOW**:
+    1.  Locate the `Link` component that displays "View all repositories". Change its conditional rendering from `results.repos.length > 0` to `results.repos.length > 3`.
+    2.  Locate the `Link` component that displays "View all posts". Change its conditional rendering from `results.posts.length > 0` to `results.posts.length > 3`.
+
+**Executor**: {"title": "[LOGIC] Fix Conditional Rendering of View All Links", "body": "### Problem / Gap\nThe 'View all' links for repositories and posts in the search dropdown are displayed even when all results are already visible, creating a confusing user experience.\n\n### Solution & Insight\nAdjust the conditional rendering of these links to only display when there are more results than what is currently shown (i.e., more than 3 results).\n\n### Impact\nImproves user experience by removing redundant links and ensuring that 'View all' links only appear when necessary.", "branch_name": "bot/fix-view-all-links-1774650947", "edits": [{"file": "apps/web/src/components/SearchBar.tsx", "search": "                            {results.repos.length > 0 &&\n        <Link\n          href={`/search?q=${encodeURIComponent(query.trim())}&type=repos`}\n          onClick={() => {setIsOpen(false);setQuery(\"\");}}\n          className=\"block text-center py-2 text-sm text-git-accent hover:bg-git-bg transition-colors border-t border-git-border\">\n          View all repositories\n        </Link>\n      }", "replace": "                            {results.repos.length > 3 &&\n        <Link\n          href={`/search?q=${encodeURIComponent(query.trim())}&type=repos`}\n          onClick={() => {setIsOpen(false);setQuery(\"\");}}\n          className=\"block text-center py-2 text-sm text-git-accent hover:bg-git-bg transition-colors border-t border-git-border\">\n          View all repositories\n        </Link>\n      }"}, {"file": "apps/web/src/components/SearchBar.tsx", "search": "                            {results.posts.length > 0 &&\n        <Link\n          href={`/search?q=${encodeURIComponent(query.trim())}&type=posts`}\n          onClick={() => {setIsOpen(false);setQuery(\"\");}}\n          className=\"block text-center py-2 text-sm text-git-accent hover:bg-git-bg transition-colors border-t border-git-border\">\n          View all posts\n        </Link>\n      }", "replace": "                            {results.posts.length > 3 &&\n        <Link\n          href={`/search?q=${encodeURIComponent(query.trim())}&type=posts`}\n          onClick={() => {setIsOpen(false);setQuery(\"\");}}\n          className=\"block text-center py-2 text-sm text-git-accent hover:bg-git-bg transition-colors border-t border-git-border\">\n          View all posts\n        </Link>\n      }"}]}
+
+**Reviewer**: Reviewer response unparseable
+
+---
