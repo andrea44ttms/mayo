@@ -6445,3 +6445,98 @@ This improvement is a self-contained refactor within `apps/web/src/lib/algo.ts`.
 **Reviewer**: APPROVE: The Executor has successfully refactored the `calculatePostScore` function in `apps/web/src/lib/algo.ts` to externalize all hardcoded parameters into a configurable object. This aligns perfectly with the Scanner's recommendation, significantly improving maintainability, configurability, and developer experience. The new `AlgorithmConfig` interface and `DEFAULT_ALGORITHM_CONFIG` object are well-defined, and the function correctly merges optional user-provided configurations. The search block was an exact match, and the replacement code is functionally sound and introduces no regressions or syntax errors. This change directly supports future enhancements like user-specified weights.
 
 ---
+
+## Cycle 1774664923
+**Scanner**: ## SCANNER ANALYSIS: HOLYKEYZ/git-pulse
+
+### Step 1: Codebase Understanding
+
+This repository, `git-pulse`, appears to be a web application designed to interact with GitHub, likely providing a personalized dashboard or social feed based on GitHub activity. It aims to offer a "pulse" of a user's GitHub world.
+
+The file `apps/web/src/app/api/github/user/route.ts` defines API endpoints for the web application. Specifically, it handles fetching the authenticated user's GitHub profile data (via a `GET` request) and updating certain profile fields (via a `PATCH` request). It acts as a secure proxy between the frontend and the GitHub API.
+
+The file `packages/ui/tsconfig.json` is the TypeScript configuration for the `ui` package within the monorepo. It extends the root TypeScript configuration and specifies compiler options relevant to a UI library, including target environment, module resolution, and JSX support.
+
+The file `packages/ui/src/index.ts` serves as a barrel file for the `ui` package, re-exporting all modules from its `lib/utils` directory. This is a common pattern for organizing and exposing utility functions from a library.
+
+The codebase utilizes a monorepo structure with `apps` and `packages` directories. It employs Next.js for the web application, TypeScript for type safety, and likely NextAuth.js (or a similar solution) for authentication, given the `auth()` function. API interactions are handled using the native `fetch` API.
+
+### Step 2: Deep Analysis
+
+**apps/web/src/app/api/github/user/route.ts**
+
+*   **Security**:
+    *   The `PATCH` route correctly whitelists `allowed` fields (`name`, `bio`, `blog`, `twitter_username`, `location`, `company`) to prevent mass assignment vulnerabilities, which is a strong security practice.
+    *   Authentication is enforced by checking `session?.user?.accessToken` for both `GET` and `PATCH` requests, preventing unauthorized access to user data.
+    *   Error messages returned to the client are generic ("unauthorized", "failed to fetch/update profile"), which is good for not leaking internal details.
+*   **Logic**:
+    *   The `GET` request successfully fetches user data from the GitHub API and returns a subset of relevant fields.
+    *   The `PATCH` request constructs a payload with only allowed fields and sends it to the GitHub API. It handles `null` or `undefined` values by converting them to empty strings (`body[key] ?? ""`), which is a reasonable approach for clearing fields on GitHub.
+    *   Error handling for non-`ok` responses from GitHub is present in both routes. The `PATCH` route attempts to parse the error message from GitHub, which is a good detail.
+*   **Performance**:
+    *   Each API route performs a single `fetch` call to the GitHub API. No obvious performance bottlenecks like N+1 queries or excessive loops are present.
+*   **Architecture**:
+    *   The file clearly separates `GET` and `PATCH` concerns into distinct exported functions, adhering to RESTful principles for API routes.
+    *   Consistent use of `NextResponse.json` for API responses.
+    *   The `auth()` function is imported from `@/lib/auth`, indicating a centralized authentication mechanism.
+*   **Features**:
+    *   The current `GET` route returns a fixed set of user profile fields. If the frontend requires additional fields from the GitHub user object in the future, this route would need modification.
+*   **Consistency**:
+    *   Consistent use of `async/await` and `Bearer` token authentication.
+    *   Standard GitHub API `Accept` header (`application/vnd.github+json`) is used.
+*   **Dead Code**: No dead code was identified.
+
+**packages/ui/tsconfig.json**
+
+*   **Consistency**:
+    *   Extends the root `../../tsconfig.json`, promoting consistent base configurations across the monorepo.
+    *   `target: "ES2020"` is consistent with recent refactoring efforts in the `git-pulse` repository (as per global memory, PR #53).
+    *   `paths: { "@/*": ["./src/*"] }` defines an alias for the `ui` package's source directory, which is a common monorepo pattern.
+*   **DX**: Standard and clear TypeScript configuration.
+*   **Dead Code**: No dead code was identified.
+
+**packages/ui/src/index.ts**
+
+*   **Architecture/Consistency**:
+    *   Acts as a barrel file, re-exporting utilities from `lib/utils`. This is a clean way to manage module exports.
+*   **Dead Code**: No dead code was identified.
+
+### Step 3: Pick ONE Improvement
+
+The most valuable improvement is to **enhance type safety for GitHub user profile data** in the API routes. This directly addresses code quality, maintainability, and prevents potential runtime errors by catching type mismatches at compile time. It aligns with the codebase's existing use of TypeScript and previous `[REFACTOR]` efforts focused on type safety (e.g., PR #71).
+
+### Step 4: Write the Executor's Plan
+
+**WHAT** to change:
+Introduce explicit TypeScript interfaces for the GitHub user profile data that is fetched and returned by the API routes. These interfaces will define the expected structure of the user profile objects. Then, apply these interfaces to the `data` variables and the return types of the `GET` and `PATCH` functions in the `github/user/route.ts` file.
+
+**WHERE** in the file(s):
+1.  Create a new file: `apps/web/src/types/github.ts`.
+2.  Modify the existing file: `apps/web/src/app/api/github/user/route.ts`.
+
+**WHY** this matters:
+Currently, the `data` objects received from the GitHub API and the objects returned by the `NextResponse.json` calls are implicitly typed. By introducing explicit interfaces, we achieve the following:
+*   **Improved Type Safety**: TypeScript will enforce that properties like `data.name` or `data.bio` exist and have the correct type, catching errors during development rather than at runtime.
+*   **Enhanced Readability**: The code becomes self-documenting, clearly indicating the expected structure of GitHub user profile data.
+*   **Easier Maintenance**: If the GitHub API response structure changes, or if new fields are added/removed, TypeScript will immediately flag inconsistencies, making future modifications safer and more predictable.
+*   **Consistency**: Aligns with best practices for TypeScript projects and the `git-pulse` repository's existing commitment to type safety.
+
+**HOW** to do it:
+1.  **Create a new file** `apps/web/src/types/github.ts`.
+2.  **Define two TypeScript interfaces** within `apps/web/src/types/github.ts`:
+    *   `GitHubUserProfile`: This interface will represent the full user profile object returned by the GitHub API that the `GET` route processes and returns. It should include `name`, `bio`, `blog`, `twitter_username`, `location`, `company`, `avatar_url`, and `login`, with appropriate types (e.g., `string | null` for nullable fields).
+    *   `GitHubProfileUpdateResponse`: This interface will represent the user profile object returned by the GitHub API after a successful `PATCH` operation. It should include `name`, `bio`, `blog`, `twitter_username`, `location`, and `company`, with appropriate types.
+3.  **Modify `apps/web/src/app/api/github/user/route.ts`**:
+    *   **Import** the newly defined `GitHubUserProfile` and `GitHubProfileUpdateResponse` interfaces from `@/types/github`.
+    *   **In the `GET` function**:
+        *   After `const data = await res.json();`, explicitly type `data` as `GitHubUserProfile`.
+        *   Ensure the object returned by `NextResponse.json` is explicitly typed or cast to `GitHubUserProfile` to guarantee its structure.
+    *   **In the `PATCH` function**:
+        *   After `const data = await res.json();`, explicitly type `data` as `GitHubProfileUpdateResponse`.
+        *   Ensure the object returned by `NextResponse.json` is explicitly typed or cast to `GitHubProfileUpdateResponse` to guarantee its structure.
+
+**Executor**: {"title": "[REFACTOR] Enhance Type Safety for GitHub User Profile Data", "body": "### Problem / Gap\nThe current implementation of the GitHub user profile API routes lacks explicit type definitions for the user profile data. This could lead to type-related errors at runtime.\n\n### Solution & Insight\nTo address this, we introduce explicit TypeScript interfaces for the GitHub user profile data. We define two interfaces: `GitHubUserProfile` for the full user profile object returned by the GitHub API and `GitHubProfileUpdateResponse` for the object returned after a successful `PATCH` operation. We then apply these interfaces to the `data` variables and return types of the `GET` and `PATCH` functions.\n\n### Impact\nThis enhancement improves type safety, making the code more maintainable and less prone to runtime errors. It also aligns with the project's commitment to using TypeScript for better code quality.", "branch_name": "bot/upgrade-1774664923", "edits": [{"file": "apps/web/src/types/github.ts", "search": "", "replace": "interface GitHubUserProfile {\n  name: string | null;\n  bio: string | null;\n  blog: string | null;\n  twitter_username: string | null;\n  location: string | null;\n  company: string | null;\n  avatar_url: string;\n  login: string;\n}\n\ninterface GitHubProfileUpdateResponse {\n  name: string | null;\n  bio: string | null;\n  blog: string | null;\n  twitter_username: string | null;\n  location: string | null;\n  company: string | null;\n}"}, {"file": "apps/web/src/app/api/github/user/route.ts", "search": "import { auth } from \"@/lib/auth\";\nimport { NextResponse } from \"next/server\";\n\n// get current user's github profile data\nexport async function GET() {\n    const session = await auth();\n    if (!session?.user?.accessToken) {\n        return NextResponse.json({ error: \"unauthorized\" }, { status: 401 });\n    }\n\n    try {\n        const res = await fetch(\"https://api.github.com/user\", {\n            headers: {\n                Authorization: `Bearer ${session.user.accessToken}`,\n                Accept: \"application/vnd.github+json\",\n            },\n        });\n\n        if (!res.ok) {\n            return NextResponse.json({ error: \"failed to fetch profile\" }, { status: res.status });\n        }\n\n        const data = await res.json();\n        return NextResponse.json({\n            name: data.name,\n            bio: data.bio,\n            blog: data.blog,\n            twitter_username: data.twitter_username,\n            location: data.location,\n            company: data.company,\n            avatar_url: data.avatar_url,\n            login: data.login,\n        });\n    } catch {\n        return NextResponse.json({ error: \"failed to fetch profile\" }, { status: 500 });\n    }\n}", "replace": "import { auth } from \"@/lib/auth\";\nimport { NextResponse } from \"next/server\";\nimport { GitHubUserProfile } from \"@/types/github\";\n\n// get current user's github profile data\nexport async function GET(): Promise<NextResponse> {\n    const session = await auth();\n    if (!session?.user?.accessToken) {\n        return NextResponse.json({ error: \"unauthorized\" }, { status: 401 });\n    }\n\n    try {\n        const res = await fetch(\"https://api.github.com/user\", {\n            headers: {\n                Authorization: `Bearer ${session.user.accessToken}`,\n                Accept: \"application/vnd.github+json\",\n            },\n        });\n\n        if (!res.ok) {\n            return NextResponse.json({ error: \"failed to fetch profile\" }, { status: res.status });\n        }\n\n        const data: GitHubUserProfile = await res.json();\n        return NextResponse.json({\n            name: data.name,\n            bio: data.bio,\n            blog: data.blog,\n            twitter_username: data.twitter_username,\n            location: data.location,\n            company: data.company,\n            avatar_url: data.avatar_url,\n            login: data.login,\n        });\n    } catch {\n        return NextResponse.json({ error: \"failed to fetch profile\" }, { status: 500 });\n    }\n}"}, {"file": "apps/web/src/app/api/github/user/route.ts", "search": "export async function PATCH(request: Request) {\n    const session = await auth();\n    if (!session?.user?.accessToken) {\n        return NextResponse.json({ error: \"unauthorized\" }, { status: 401 });\n    }\n\n    try {\n        const body = await request.json();\n\n        // only allow safe fields\n        const allowed = [\"name\", \"bio\", \"blog\", \"twitter_username\", \"location\", \"company\"];\n        const payload: Record<string, string> = {};\n        for (const key of allowed) {\n            if (key in body) {\n                payload[key] = body[key] ?? \"\";\n            }\n        }\n\n        const res = await fetch(\"https://api.github.com/user\", {\n            method: \"PATCH\",\n            headers: {\n                Authorization: `Bearer ${session.user.accessToken}`,\n                Accept: \"application/vnd.github+json\",\n                \"Content-Type\": \"application/json\",\n            },\n            body: JSON.stringify(payload),\n        });\n\n        if (!res.ok) {\n            const err = await res.json().catch(() => ({}));\n            return NextResponse.json(\n                { error: err.message || \"failed to update profile\" },\n                { status: res.status }\n            );\n        }\n\n        const data = await res.json();\n        return NextResponse.json({\n            name: data.name,\n            bio: data.bio,\n            blog: data.blog,\n            twitter_username: data.twitter_username,\n            location: data.location,\n            company: data.company,\n        });\n    } catch {\n        return NextResponse.json({ error: \"failed to update profile\" }, { status: 500 });\n    }\n}", "replace": "export async function PATCH(request: Request): Promise<NextResponse> {\n    const session = await auth();\n    if (!session?.user?.accessToken) {\n        return NextResponse.json({ error: \"unauthorized\" }, { status: 401 });\n    }\n\n    try {\n        const body = await request.json();\n\n        // only allow safe fields\n        const allowed = [\"name\", \"bio\", \"blog\", \"twitter_username\", \"location\", \"company\"];\n        const payload: Record<string, string> = {};\n        for (const key of allowed) {\n            if (key in body) {\n                payload[key] = body[key] ?? \"\";\n            }\n        }\n\n        const res = await fetch(\"https://api.github.com/user\", {\n            method: \"PATCH\",\n            headers: {\n                Authorization: `Bearer ${session.user.accessToken}`,\n                Accept: \"application/vnd.github+json\",\n                \"Content-Type\": \"application/json\",\n            },\n            body: JSON.stringify(payload),\n        });\n\n        if (!res.ok) {\n            const err = await res.json().catch(() => ({}));\n            return NextResponse.json(\n                { error: err.message || \"failed to update profile\" },\n                { status: res.status }\n            );\n        }\n\n        const data: GitHubProfileUpdateResponse = await res.json();\n        return NextResponse.json({\n            name: data.name,\n            bio: data.bio,\n            blog: data.blog,\n            twitter_username: data.twitter_username,\n            location: data.location,\n            company: data.company,\n        });\n    } catch {\n        return NextResponse.json({ error: \"failed to update profile\" }, { status: 500 });\n    }\n}"}]}
+
+**Reviewer**: REJECTED x2: The new file `apps/web/src/types/github.ts` was not created, which is essential for the proposed type safety improvements. The `search: ""` pattern for file creation or initial content insertion appears to be failing consistently. Please find an alternative, reliable method to create `apps/web/src/types/github.ts` with the specified interfaces. Once the file creation is confirmed to work, the subsequent edits to `apps/web/src/app/api/github/user/route.ts` should be re-applied.
+
+---
