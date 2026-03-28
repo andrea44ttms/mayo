@@ -6688,75 +6688,7 @@ This improvement is focused on a single configuration file, `apps/web/tsconfig.j
 
 ---
 
-## Cycle 1774712126
-**Scanner**: ## Codebase Understanding
-
-This repository, `HOLYKEYZ/git-pulse`, is a web application designed to provide a social layer on top of GitHub. It likely allows users to interact, share, and discover content related to GitHub activities, such as repositories, contributions, and other developers.
-
-The file `apps/web/src/app/api/user/status/route.ts` handles the API endpoint for updating a user's custom status, which includes an emoji and a text message. It receives these details from the client, authenticates the user, and then persists the status to the database.
-
-The file `apps/web/public/manifest.json` is the Web App Manifest for the `git-pulse` application. It defines metadata for the Progressive Web App (PWA) experience, such as the application's name, description, start URL, display mode, theme colors, and icons, enabling it to be installed and behave more like a native application.
-
-The file `apps/web/src/components/CollabWidget.tsx` is a React component responsible for displaying a "Developers like you" widget. It fetches a list of potential collaborators from an internal API (`/api/collab`), shows loading and error states, and renders a list of matching developers with their avatars, usernames, shared languages, and similarity percentages.
-
-The codebase primarily uses Next.js for the web application, React for UI components, and Prisma for database interactions. It follows typical API route conventions for Next.js and uses Tailwind CSS for styling (indicated by class names like `git-border`, `bg-git-card`).
-
-## Deep Analysis
-
-### apps/web/src/app/api/user/status/route.ts
-
-*   **Security**: The route correctly checks for user authentication. However, there is no explicit input validation for the content of `emoji` or `text` beyond checking for their presence. This means that excessively long strings could be stored in the database, potentially leading to database bloat, unexpected UI rendering issues if these values are displayed elsewhere without truncation, or even denial-of-service if a very large payload is repeatedly sent.
-*   **Logic**: The core logic for updating the user status is sound.
-*   **Consistency**: Follows Next.js API route patterns.
-
-### apps/web/public/manifest.json
-
-*   **Logic**: All icon entries point to the same `/icon.png` file, relying on the browser to scale it for different sizes. While functional, it's generally better practice for PWAs to provide distinct icon assets optimized for each specified size (e.g., 192x192, 512x512) to ensure optimal visual quality and crispness across various device resolutions and contexts, rather than relying solely on browser scaling of a single image. This is an enhancement rather than a bug.
-*   **Consistency**: Standard JSON format.
-
-### apps/web/src/components/CollabWidget.tsx
-
-*   **Security**: The component renders `match.username` and `match.sharedLanguages` directly into the DOM. It also uses `match.username` to construct a `href` for a `Link` component. If the `/api/collab` endpoint does not properly sanitize the data it returns, there is a potential for Cross-Site Scripting (XSS) vulnerabilities, especially if `match.username` could contain `javascript:` URLs or if `match.sharedLanguages` could contain script tags.
-*   **Logic**: There is a redundant conditional check: `if (matches.length === 0) return null;` appears twice consecutively. One of these lines is dead code and can be removed.
-*   **Performance**: The component fetches data once on mount. Skeleton loaders are used for a good user experience during loading.
-*   **Consistency**: Uses Next.js `Image` and `Link` components, and Tailwind CSS classes consistently.
-
-## Pick ONE Improvement
-
-The most valuable improvement is to add **server-side input validation** for the `emoji` and `text` fields in the user status update API route. This addresses a robustness and security concern by preventing the storage of malformed or excessively large data, which can lead to database issues, performance degradation, and potential UI breakage. This is a higher priority than removing a duplicate line of code or optimizing PWA icons.
-
-## Executor's Plan
-
-**WHAT**: Implement server-side validation for the `emoji` and `text` fields received in the user status update API. Specifically, ensure the `statusEmoji` is a single character (or null) and the `statusText` does not exceed a reasonable maximum length (e.g., 80 characters, or null). If validation fails, return an appropriate error response.
-
-**WHERE**: In the `PUT` asynchronous function within the file `apps/web/src/app/api/user/status/route.ts`. The new validation logic should be inserted immediately after the request body is parsed and before the `prisma.user.update` operation.
-
-**WHY**: Without this validation, the API is vulnerable to clients sending arbitrary string lengths for user status. This can lead to:
-1.  **Data Integrity Issues**: Storing excessively long strings can consume unnecessary database resources and potentially violate schema constraints if they were to be added.
-2.  **Performance Degradation**: Larger data payloads can impact database write/read performance.
-3.  **Client-Side Instability**: If these unvalidated strings are later displayed in the UI, they could cause layout breaks, overflow issues, or performance problems in client-side rendering.
-4.  **Abuse Prevention**: It's a fundamental security practice to validate all user-supplied input at the API boundary to ensure data quality and prevent potential misuse, even if not a direct injection vulnerability. Limiting emoji to a single character is standard, and a concise text limit aligns with typical status message expectations.
-
-**HOW**:
-1.  Locate the `PUT` asynchronous function in the `apps/web/src/app/api/user/status/route.ts` file.
-2.  Find the line where the request body is destructured: `const { emoji, text } = await req.json();`.
-3.  Immediately after this line, insert new logic to validate the `emoji` and `text` variables.
-4.  For the `emoji` variable:
-    *   If `emoji` is present (not null or undefined) and is a string, check if its length is greater than 1.
-    *   If it is, return a `NextResponse.json` object with an error message such as "Status emoji must be a single character" and set the HTTP status code to 400.
-5.  For the `text` variable:
-    *   If `text` is present (not null or undefined) and is a string, check if its length exceeds 80 characters.
-    *   If it does, return a `NextResponse.json` object with an error message such as "Status text cannot exceed 80 characters" and set the HTTP status code to 400.
-6.  Ensure that these validation checks are performed before the `const user = await prisma.user.update(...)` call.
-7.  The existing `try...catch` block should encompass these new validation checks to handle any potential errors during the `req.json()` parsing or the validation process itself.
-
-**Executor**: {"title": "[SEC] Validate User Status Input", "body": "### Problem / Gap\nThe user status update API does not validate the input for `emoji` and `text` fields, potentially leading to storing malformed or excessively large data.\n\n### Solution & Insight\nImplement server-side validation to ensure `emoji` is a single character (or null) and `text` does not exceed a reasonable maximum length (e.g., 80 characters, or null). Return an error response if validation fails.\n\n### Impact\nPrevents potential database issues, performance degradation, and UI breakage due to unvalidated user input.", "branch_name": "bot/validate-user-status-input", "edits": [{"file": "apps/web/src/app/api/user/status/route.ts", "search": "const { emoji, text } = await req.json();\n\nconst user = await prisma.user.update({", "replace": "const { emoji, text } = await req.json();\n\nif (emoji && typeof emoji === 'string' && emoji.length > 1) {\n  return NextResponse.json({ error: 'Status emoji must be a single character' }, { status: 400 });\n}\nif (text && typeof text === 'string' && text.length > 80) {\n  return NextResponse.json({ error: 'Status text cannot exceed 80 characters' }, { status: 400 });\n}\nconst user = await prisma.user.update({"}]}
-
-**Reviewer**: CORRECT: The Executor's proposed edits correctly implement the server-side validation logic for `emoji` and `text` fields as per the Scanner's plan. The validation conditions (emoji length, text length) and error responses are appropriate and functional. However, the `search` block in the proposed edit is missing the leading whitespace (indentation) for the lines it targets. This will cause the patched code to have incorrect indentation, as seen in the diff preview, which is a recurring issue for this repository. I will correct the `search` and `replace` blocks to include the proper indentation.
-
----
-
-## Cycle 1774715950
+1774715950
 **Scanner**: ## SCANNER ANALYSIS: HOLYKEYZ/git-pulse
 
 ### Step 1: Codebase Understanding
@@ -7017,5 +6949,75 @@ This improvement is entirely contained within the `findSimilarDevs` function in 
 **Executor**: {"title": "[PERF] Optimize findSimilarDevs Function", "body": "### Problem / Gap\nThe `findSimilarDevs` function in `apps/web/src/lib/matching.ts` suffers from an N+1 query problem. This leads to a significant performance bottleneck as the number of users grows.\n\n### Solution & Insight\nTo address this, we will modify the `findSimilarDevs` function to fetch all necessary posts in a single query before processing. This approach reduces the number of database operations, resulting in faster execution times and improved system efficiency.\n\n### Impact\nThis optimization will drastically improve the performance of the developer matching engine, especially as the user base expands. By reducing the number of database queries, we minimize the load on the database and enhance the overall responsiveness of the application.", "branch_name": "bot/optimize-find-similar-devs-1774726342", "edits": [{"file": "apps/web/src/lib/matching.ts", "search": "const matches: CollabMatch[] = [];\n\n  for (const user of users) {\n    // i can't fetch their repos without their token, so we'll\n    // use a heuristic based on their posts' repo languages\n    const posts = await prisma.post.findMany({\n      where: { author: { username: user.username } },\n      select: { repoEmbed: true },\n      take: 20\n    });", "replace": "const matches: CollabMatch[] = [];\n\n  // Fetch all posts for all users in one query\n  const allPosts = await prisma.post.findMany({\n    where: {\n      author: { username: { in: users.map((u) => u.username) } }\n    },\n    select: {\n      id: true,\n      repoEmbed: true,\n      author: {\n        select: { username: true }\n      }\n    }\n  });\n\n  // Group posts by user\n  const postsByUser: Record<string, any[]> = {};\n  allPosts.forEach((post) => {\n    if (!postsByUser[post.author.username]) {\n      postsByUser[post.author.username] = [];\n    }\n    postsByUser[post.author.username].push(post);\n  });\n\n  for (const user of users) {\n    const posts = postsByUser[user.username] || [];"}]}
 
 **Reviewer**: CORRECT: The Executor correctly identified and addressed the N+1 query problem in `findSimilarDevs`, which is a critical performance optimization. The logic for fetching all posts in a single query and then grouping them by user is sound and aligns perfectly with the Scanner's recommendation. However, the search block and the first line of the replacement block had minor indentation mismatches compared to the original file content. Given the repo's history of rejections due to such mismatches, these have been corrected to ensure a successful patch.
+
+---
+
+## Cycle 1774730087
+**Scanner**: ## SCANNER ANALYSIS: HOLYKEYZ/git-pulse
+
+### Step 1: Codebase Understanding
+
+*   **What does this repository do?**
+    The `git-pulse` repository appears to be a web application designed to aggregate and display information about GitHub repositories and user-generated posts related to them. It includes features like a feed, notifications, user profiles, and an algorithm to score/rank posts based on repository metrics.
+*   **What do the target files do within the repo?**
+    *   `apps/web/src/lib/algo.ts`: This file defines the core logic for the `calculatePostScoreDetailed` algorithm. This algorithm assigns a "quality score" to a post based on various factors of its embedded GitHub repository, such as language, stars, forks, commit activity, push consistency, and time since creation/push. It also provides a detailed breakdown of how each factor contributes to the score.
+    *   `apps/web/src/app/algo/page.tsx`: This is a Next.js page that serves as a visualization tool for the `calculatePostScoreDetailed` algorithm. It fetches recent posts, applies the scoring algorithm to them, sorts them by score, and displays each post with a detailed breakdown of its score components in a user interface.
+    *   `packages/ui/package.json`: This is the package manifest for the `ui` component library within the monorepo. It lists the dependencies and development dependencies required for the shared UI components, such as `clsx`, `tailwind-merge`, `typescript`, `react`, and `react-dom`.
+*   **What patterns, frameworks, or conventions does the codebase use?**
+    The codebase uses a Next.js framework for the web application, TypeScript for type safety, and Prisma for database interaction. It follows a monorepo structure with `apps` and `packages` directories. Tailwind CSS is used for styling, indicated by `tailwind-merge` and `postcss.config.mjs`. The `algo.ts` file demonstrates a pattern of detailed scoring with a breakdown, and `algo/page.tsx` shows server-side data fetching with `async/await` in a Next.js App Router page.
+
+### Step 2: Deep Analysis
+
+*   **Security**: No immediate security vulnerabilities found in the provided files. The `algo.ts` file is purely computational, and `algo/page.tsx` fetches data from Prisma, which is generally secure if queries are parameterized.
+*   **Logic**:
+    *   **Critical Bug in `apps/web/src/lib/algo.ts`**: The `calculatePostScoreDetailed` function contains a significant logical and syntax error. There is an `if` statement block for star calculation that references an undefined variable `effectiveConfig` (e.g., `effectiveConfig.starSweetSpotMin`). This block is also syntactically malformed, as it appears to be prematurely closed or incorrectly nested, leading to a syntax error in the file. Immediately following this problematic block is another, functional star calculation block using hardcoded values. This indicates an incomplete or failed refactoring attempt.
+    *   **Redundant/Premature Return in `apps/web/src/lib/algo.ts`**: Within `calculatePostScoreDetailed`, there's a line `return Math.max(score / decayFactor, 0);` that appears prematurely before all score factors (specifically the final time decay) have been fully calculated and before the `breakdown` object is completely populated. This line also references `decayFactor` which, at that point, would be calculated using the undefined `effectiveConfig.timeDecayExponent`. This is a critical bug.
+    *   **Consistency in `apps/web/src/lib/algo.ts`**: The `noveltyLanguages` and `commonLanguages` arrays are hardcoded. While functional, centralizing these or making them configurable could improve maintainability if the algorithm frequently changes. (Lower priority than the critical bugs).
+*   **Performance**:
+    *   `apps/web/src/app/algo/page.tsx` uses `export const revalidate = 0;`, which means the page will be dynamically rendered on every request. For an algorithm visualization page, this is likely acceptable as it's not expected to be high-traffic and benefits from always showing the latest data. No immediate performance bottlenecks identified in the scoring logic itself.
+*   **Architecture**:
+    *   **Configuration Management**: The attempt to use `effectiveConfig` in `algo.ts` suggests an architectural intent to centralize algorithm parameters, which aligns with good practices. The current state, however, is broken. Properly implementing a configuration object for the algorithm's weights and thresholds would be an architectural improvement.
+    *   **Component Location**: The `StatCard` component in `apps/web/src/app/algo/page.tsx` is defined directly within the page file. While acceptable for a component used only once, if it were to be reused, it should be moved to a shared `components` directory.
+*   **Features**: No missing features identified in the scope of these files. The algorithm visualization page is a good feature for understanding the scoring.
+*   **Testing**: No test files were provided for analysis, so it's unclear if the algorithm or page logic is adequately tested. Given the critical bugs found, improved testing could be beneficial.
+*   **DX (Developer Experience)**: The current state of `algo.ts` with the syntax error and undefined variable would significantly hinder developer experience, making the file uncompilable or causing runtime errors.
+*   **Consistency**:
+    *   **Star Calculation**: The presence of two distinct (and one broken) star calculation blocks in `algo.ts` is a major consistency issue.
+    *   **React Version**: `packages/ui/package.json` lists `react: "19.0.0"` and `react-dom: "19.0.0"`. As per the anti-hallucination rules, this is considered correct and stable, and no changes should be suggested.
+*   **Dead Code**: The problematic `if (factors.stars >= effectiveConfig.starSweetSpotMin ...)` block in `algo.ts` is effectively dead or broken code due to the `ReferenceError` and syntax issues. The premature `return` statement is also effectively dead code as it would prevent the full breakdown from being generated.
+
+### Step 3: Pick ONE Improvement
+
+The most valuable improvement is to fix the critical bugs and inconsistencies in `apps/web/src/lib/algo.ts` related to the star calculation and the final score/decay calculation. This addresses a syntax error, a `ReferenceError`, and logical redundancy, which are high-priority issues impacting the core functionality of the application's ranking algorithm.
+
+### Step 4: Write the Executor's Plan
+
+**WHAT**:
+The goal is to resolve the critical syntax error, `ReferenceError`, and logical inconsistencies within the `calculatePostScoreDetailed` function in `apps/web/src/lib/algo.ts`. This involves:
+1.  Removing the syntactically incorrect and functionally broken star calculation block that references the undefined `effectiveConfig` variable.
+2.  Ensuring that only one, correct star calculation logic remains.
+3.  Removing the premature `return` statement that appears before the full score breakdown is generated and before the final time decay is applied.
+4.  Confirming that the time decay is calculated and applied correctly once, and the `breakdown.decayMultiplier` is set before the final score and breakdown object are returned.
+
+**WHERE**:
+*   **File**: `apps/web/src/lib/algo.ts`
+*   **Location 1 (Star Calculation)**: Inside the `calculatePostScoreDetailed` function, locate the block of code that starts with `if (factors.stars >= effectiveConfig.starSweetSpotMin ...)` and extends to the line just before `// 2. Stars (Reduced max weight to prevent pure popularity dominance)`. This block includes multiple `else if` conditions and a stray closing brace `}`.
+*   **Location 2 (Premature Return and Decay)**: Inside the `calculatePostScoreDetailed` function, locate the line `const decayFactor = Math.pow(Math.max(factors.daysSincePost, 1), effectiveConfig.timeDecayExponent);` and the subsequent line `return Math.max(score / decayFactor, 0);`.
+
+**WHY**:
+The current state of `apps/web/src/lib/algo.ts` contains a critical syntax error and a `ReferenceError` due to the use of an undefined `effectiveConfig` variable within a star calculation block. This makes the file uncompilable or causes runtime crashes, directly breaking the core ranking algorithm. Furthermore, there's a premature `return` statement that prevents the algorithm from completing its calculations and returning a full `PostScoreDetail` object, leading to incorrect or incomplete results. Fixing these issues is paramount to ensure the application's core functionality is stable, reliable, and produces accurate scores and breakdowns. This also cleans up an incomplete refactoring attempt, improving code maintainability.
+
+**HOW**:
+1.  Open the file `apps/web/src/lib/algo.ts`.
+2.  Navigate to the `calculatePostScoreDetailed` function.
+3.  Locate the block of code that begins with `if (factors.stars >= effectiveConfig.starSweetSpotMin && factors.stars <= effectiveConfig.starSweetSpotMax) {` and ends just before the comment `// 2. Stars (Reduced max weight to prevent pure popularity dominance)`. This block contains references to `effectiveConfig` and is syntactically malformed. Delete this entire problematic block, including any associated `else if` statements and the stray closing brace `}` that follows `score += factors.stars * effectiveConfig.smallRepoStarMultiplier;`.
+4.  After this deletion, ensure that the star calculation logic starting with `// 2. Stars (Reduced max weight to prevent pure popularity dominance)` and its subsequent `if (factors.stars >= 20 && factors.stars <= 1000) { ... } else if (factors.stars > 1000) { ... } else if (factors.stars > 0) { ... }` is the *only* star calculation block present and is correctly indented.
+5.  Locate the line `const decayFactor = Math.pow(Math.max(factors.daysSincePost, 1), effectiveConfig.timeDecayExponent);`. Delete this line.
+6.  Locate the line `return Math.max(score / decayFactor, 0);`. Delete this line.
+7.  Verify that the final time decay calculation and return statement are correctly structured at the end of the function. This block should start with `// 9. Time decay` and include the lines `const decayFactor = Math.pow(Math.max(factors.daysSincePost, 1), 1.2);`, `breakdown.decayMultiplier = 1 / decayFactor;`, `const finalScore = Math.max(score / decayFactor, 0);`, and the final `return { score: finalScore, breakdown };`. Ensure this block is the only one handling the final time decay application and the return of the `PostScoreDetail` object.
+
+**Executor**: {"title": "[LOGIC] Fix Critical Bugs in Algorithm Scoring", "body": "### Problem / Gap\nThe `calculatePostScoreDetailed` function in `apps/web/src/lib/algo.ts` contains a critical syntax error and a `ReferenceError` due to the use of an undefined `effectiveConfig` variable within a star calculation block. Additionally, there's a premature `return` statement that prevents the algorithm from completing its calculations and returning a full `PostScoreDetail` object.\n\n### Solution & Insight\nTo fix these issues, we will delete the broken star calculation block and the premature decay factor calculation and return statement. This ensures that only the correct star calculation and final time decay/return logic are present.\n\n### Impact\nFixing these critical bugs will stabilize the core ranking algorithm, ensuring it produces accurate scores and breakdowns. This directly improves the application's functionality and reliability.", "branch_name": "bot/fix-algo-bugs-1774730087", "edits": [{"file": "apps/web/src/lib/algo.ts", "search": "if (factors.stars >= effectiveConfig.starSweetSpotMin && factors.stars <= effectiveConfig.starSweetSpotMax) {\n  const normalizedStar = Math.min(factors.stars, effectiveConfig.starSweetSpotMax);\n  score += effectiveConfig.starSweetSpotBaseBoost + Math.min(normalizedStar * effectiveConfig.starSweetSpotMultiplier, effectiveConfig.starSweetSpotCap);\n} else if (factors.stars > effectiveConfig.starSweetSpotMax) {\n  score += effectiveConfig.starOver1kBoost;\n} else if (factors.stars > 0) {\n  score += factors.stars * effectiveConfig.smallRepoStarMultiplier;\n}", "replace": ""}, {"file": "apps/web/src/lib/algo.ts", "search": "const decayFactor = Math.pow(Math.max(factors.daysSincePost, 1), effectiveConfig.timeDecayExponent);\n\nreturn Math.max(score / decayFactor, 0);", "replace": ""}]}
+
+**Reviewer**: CORRECT: The Executor's proposed edits correctly identify the problematic code blocks in `apps/web/src/lib/algo.ts` that cause `ReferenceError` and logical inconsistencies, aligning with the Scanner's plan. However, the search blocks provided in the JSON are not exact matches to the original file content, which is a recurring issue for this repository. Specifically, the first edit's search block includes a closing brace `}` that is not present in the original code, and the second edit's search block fails to include a necessary stray closing brace `}` that would remain after the patch, leading to a syntax error. Both search blocks have been corrected to ensure an exact match and a compilable outcome.
 
 ---
