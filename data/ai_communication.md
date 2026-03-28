@@ -6323,102 +6323,7 @@ This improvement is a self-contained refactor within `apps/web/src/lib/algo.ts`.
 
 ---
 
-## Cycle 1774664923
-**Scanner**: ## SCANNER ANALYSIS: HOLYKEYZ/git-pulse
-
-### Step 1: Codebase Understanding
-
-This repository, `git-pulse`, appears to be a web application designed to interact with GitHub, likely providing a personalized dashboard or social feed based on GitHub activity. It aims to offer a "pulse" of a user's GitHub world.
-
-The file `apps/web/src/app/api/github/user/route.ts` defines API endpoints for the web application. Specifically, it handles fetching the authenticated user's GitHub profile data (via a `GET` request) and updating certain profile fields (via a `PATCH` request). It acts as a secure proxy between the frontend and the GitHub API.
-
-The file `packages/ui/tsconfig.json` is the TypeScript configuration for the `ui` package within the monorepo. It extends the root TypeScript configuration and specifies compiler options relevant to a UI library, including target environment, module resolution, and JSX support.
-
-The file `packages/ui/src/index.ts` serves as a barrel file for the `ui` package, re-exporting all modules from its `lib/utils` directory. This is a common pattern for organizing and exposing utility functions from a library.
-
-The codebase utilizes a monorepo structure with `apps` and `packages` directories. It employs Next.js for the web application, TypeScript for type safety, and likely NextAuth.js (or a similar solution) for authentication, given the `auth()` function. API interactions are handled using the native `fetch` API.
-
-### Step 2: Deep Analysis
-
-**apps/web/src/app/api/github/user/route.ts**
-
-*   **Security**:
-    *   The `PATCH` route correctly whitelists `allowed` fields (`name`, `bio`, `blog`, `twitter_username`, `location`, `company`) to prevent mass assignment vulnerabilities, which is a strong security practice.
-    *   Authentication is enforced by checking `session?.user?.accessToken` for both `GET` and `PATCH` requests, preventing unauthorized access to user data.
-    *   Error messages returned to the client are generic ("unauthorized", "failed to fetch/update profile"), which is good for not leaking internal details.
-*   **Logic**:
-    *   The `GET` request successfully fetches user data from the GitHub API and returns a subset of relevant fields.
-    *   The `PATCH` request constructs a payload with only allowed fields and sends it to the GitHub API. It handles `null` or `undefined` values by converting them to empty strings (`body[key] ?? ""`), which is a reasonable approach for clearing fields on GitHub.
-    *   Error handling for non-`ok` responses from GitHub is present in both routes. The `PATCH` route attempts to parse the error message from GitHub, which is a good detail.
-*   **Performance**:
-    *   Each API route performs a single `fetch` call to the GitHub API. No obvious performance bottlenecks like N+1 queries or excessive loops are present.
-*   **Architecture**:
-    *   The file clearly separates `GET` and `PATCH` concerns into distinct exported functions, adhering to RESTful principles for API routes.
-    *   Consistent use of `NextResponse.json` for API responses.
-    *   The `auth()` function is imported from `@/lib/auth`, indicating a centralized authentication mechanism.
-*   **Features**:
-    *   The current `GET` route returns a fixed set of user profile fields. If the frontend requires additional fields from the GitHub user object in the future, this route would need modification.
-*   **Consistency**:
-    *   Consistent use of `async/await` and `Bearer` token authentication.
-    *   Standard GitHub API `Accept` header (`application/vnd.github+json`) is used.
-*   **Dead Code**: No dead code was identified.
-
-**packages/ui/tsconfig.json**
-
-*   **Consistency**:
-    *   Extends the root `../../tsconfig.json`, promoting consistent base configurations across the monorepo.
-    *   `target: "ES2020"` is consistent with recent refactoring efforts in the `git-pulse` repository (as per global memory, PR #53).
-    *   `paths: { "@/*": ["./src/*"] }` defines an alias for the `ui` package's source directory, which is a common monorepo pattern.
-*   **DX**: Standard and clear TypeScript configuration.
-*   **Dead Code**: No dead code was identified.
-
-**packages/ui/src/index.ts**
-
-*   **Architecture/Consistency**:
-    *   Acts as a barrel file, re-exporting utilities from `lib/utils`. This is a clean way to manage module exports.
-*   **Dead Code**: No dead code was identified.
-
-### Step 3: Pick ONE Improvement
-
-The most valuable improvement is to **enhance type safety for GitHub user profile data** in the API routes. This directly addresses code quality, maintainability, and prevents potential runtime errors by catching type mismatches at compile time. It aligns with the codebase's existing use of TypeScript and previous `[REFACTOR]` efforts focused on type safety (e.g., PR #71).
-
-### Step 4: Write the Executor's Plan
-
-**WHAT** to change:
-Introduce explicit TypeScript interfaces for the GitHub user profile data that is fetched and returned by the API routes. These interfaces will define the expected structure of the user profile objects. Then, apply these interfaces to the `data` variables and the return types of the `GET` and `PATCH` functions in the `github/user/route.ts` file.
-
-**WHERE** in the file(s):
-1.  Create a new file: `apps/web/src/types/github.ts`.
-2.  Modify the existing file: `apps/web/src/app/api/github/user/route.ts`.
-
-**WHY** this matters:
-Currently, the `data` objects received from the GitHub API and the objects returned by the `NextResponse.json` calls are implicitly typed. By introducing explicit interfaces, we achieve the following:
-*   **Improved Type Safety**: TypeScript will enforce that properties like `data.name` or `data.bio` exist and have the correct type, catching errors during development rather than at runtime.
-*   **Enhanced Readability**: The code becomes self-documenting, clearly indicating the expected structure of GitHub user profile data.
-*   **Easier Maintenance**: If the GitHub API response structure changes, or if new fields are added/removed, TypeScript will immediately flag inconsistencies, making future modifications safer and more predictable.
-*   **Consistency**: Aligns with best practices for TypeScript projects and the `git-pulse` repository's existing commitment to type safety.
-
-**HOW** to do it:
-1.  **Create a new file** `apps/web/src/types/github.ts`.
-2.  **Define two TypeScript interfaces** within `apps/web/src/types/github.ts`:
-    *   `GitHubUserProfile`: This interface will represent the full user profile object returned by the GitHub API that the `GET` route processes and returns. It should include `name`, `bio`, `blog`, `twitter_username`, `location`, `company`, `avatar_url`, and `login`, with appropriate types (e.g., `string | null` for nullable fields).
-    *   `GitHubProfileUpdateResponse`: This interface will represent the user profile object returned by the GitHub API after a successful `PATCH` operation. It should include `name`, `bio`, `blog`, `twitter_username`, `location`, and `company`, with appropriate types.
-3.  **Modify `apps/web/src/app/api/github/user/route.ts`**:
-    *   **Import** the newly defined `GitHubUserProfile` and `GitHubProfileUpdateResponse` interfaces from `@/types/github`.
-    *   **In the `GET` function**:
-        *   After `const data = await res.json();`, explicitly type `data` as `GitHubUserProfile`.
-        *   Ensure the object returned by `NextResponse.json` is explicitly typed or cast to `GitHubUserProfile` to guarantee its structure.
-    *   **In the `PATCH` function**:
-        *   After `const data = await res.json();`, explicitly type `data` as `GitHubProfileUpdateResponse`.
-        *   Ensure the object returned by `NextResponse.json` is explicitly typed or cast to `GitHubProfileUpdateResponse` to guarantee its structure.
-
-**Executor**: {"title": "[REFACTOR] Enhance Type Safety for GitHub User Profile Data", "body": "### Problem / Gap\nThe current implementation of the GitHub user profile API routes lacks explicit type definitions for the user profile data. This could lead to type-related errors at runtime.\n\n### Solution & Insight\nTo address this, we introduce explicit TypeScript interfaces for the GitHub user profile data. We define two interfaces: `GitHubUserProfile` for the full user profile object returned by the GitHub API and `GitHubProfileUpdateResponse` for the object returned after a successful `PATCH` operation. We then apply these interfaces to the `data` variables and return types of the `GET` and `PATCH` functions.\n\n### Impact\nThis enhancement improves type safety, making the code more maintainable and less prone to runtime errors. It also aligns with the project's commitment to using TypeScript for better code quality.", "branch_name": "bot/upgrade-1774664923", "edits": [{"file": "apps/web/src/types/github.ts", "search": "", "replace": "interface GitHubUserProfile {\n  name: string | null;\n  bio: string | null;\n  blog: string | null;\n  twitter_username: string | null;\n  location: string | null;\n  company: string | null;\n  avatar_url: string;\n  login: string;\n}\n\ninterface GitHubProfileUpdateResponse {\n  name: string | null;\n  bio: string | null;\n  blog: string | null;\n  twitter_username: string | null;\n  location: string | null;\n  company: string | null;\n}"}, {"file": "apps/web/src/app/api/github/user/route.ts", "search": "import { auth } from \"@/lib/auth\";\nimport { NextResponse } from \"next/server\";\n\n// get current user's github profile data\nexport async function GET() {\n    const session = await auth();\n    if (!session?.user?.accessToken) {\n        return NextResponse.json({ error: \"unauthorized\" }, { status: 401 });\n    }\n\n    try {\n        const res = await fetch(\"https://api.github.com/user\", {\n            headers: {\n                Authorization: `Bearer ${session.user.accessToken}`,\n                Accept: \"application/vnd.github+json\",\n            },\n        });\n\n        if (!res.ok) {\n            return NextResponse.json({ error: \"failed to fetch profile\" }, { status: res.status });\n        }\n\n        const data = await res.json();\n        return NextResponse.json({\n            name: data.name,\n            bio: data.bio,\n            blog: data.blog,\n            twitter_username: data.twitter_username,\n            location: data.location,\n            company: data.company,\n            avatar_url: data.avatar_url,\n            login: data.login,\n        });\n    } catch {\n        return NextResponse.json({ error: \"failed to fetch profile\" }, { status: 500 });\n    }\n}", "replace": "import { auth } from \"@/lib/auth\";\nimport { NextResponse } from \"next/server\";\nimport { GitHubUserProfile } from \"@/types/github\";\n\n// get current user's github profile data\nexport async function GET(): Promise<NextResponse> {\n    const session = await auth();\n    if (!session?.user?.accessToken) {\n        return NextResponse.json({ error: \"unauthorized\" }, { status: 401 });\n    }\n\n    try {\n        const res = await fetch(\"https://api.github.com/user\", {\n            headers: {\n                Authorization: `Bearer ${session.user.accessToken}`,\n                Accept: \"application/vnd.github+json\",\n            },\n        });\n\n        if (!res.ok) {\n            return NextResponse.json({ error: \"failed to fetch profile\" }, { status: res.status });\n        }\n\n        const data: GitHubUserProfile = await res.json();\n        return NextResponse.json({\n            name: data.name,\n            bio: data.bio,\n            blog: data.blog,\n            twitter_username: data.twitter_username,\n            location: data.location,\n            company: data.company,\n            avatar_url: data.avatar_url,\n            login: data.login,\n        });\n    } catch {\n        return NextResponse.json({ error: \"failed to fetch profile\" }, { status: 500 });\n    }\n}"}, {"file": "apps/web/src/app/api/github/user/route.ts", "search": "export async function PATCH(request: Request) {\n    const session = await auth();\n    if (!session?.user?.accessToken) {\n        return NextResponse.json({ error: \"unauthorized\" }, { status: 401 });\n    }\n\n    try {\n        const body = await request.json();\n\n        // only allow safe fields\n        const allowed = [\"name\", \"bio\", \"blog\", \"twitter_username\", \"location\", \"company\"];\n        const payload: Record<string, string> = {};\n        for (const key of allowed) {\n            if (key in body) {\n                payload[key] = body[key] ?? \"\";\n            }\n        }\n\n        const res = await fetch(\"https://api.github.com/user\", {\n            method: \"PATCH\",\n            headers: {\n                Authorization: `Bearer ${session.user.accessToken}`,\n                Accept: \"application/vnd.github+json\",\n                \"Content-Type\": \"application/json\",\n            },\n            body: JSON.stringify(payload),\n        });\n\n        if (!res.ok) {\n            const err = await res.json().catch(() => ({}));\n            return NextResponse.json(\n                { error: err.message || \"failed to update profile\" },\n                { status: res.status }\n            );\n        }\n\n        const data = await res.json();\n        return NextResponse.json({\n            name: data.name,\n            bio: data.bio,\n            blog: data.blog,\n            twitter_username: data.twitter_username,\n            location: data.location,\n            company: data.company,\n        });\n    } catch {\n        return NextResponse.json({ error: \"failed to update profile\" }, { status: 500 });\n    }\n}", "replace": "export async function PATCH(request: Request): Promise<NextResponse> {\n    const session = await auth();\n    if (!session?.user?.accessToken) {\n        return NextResponse.json({ error: \"unauthorized\" }, { status: 401 });\n    }\n\n    try {\n        const body = await request.json();\n\n        // only allow safe fields\n        const allowed = [\"name\", \"bio\", \"blog\", \"twitter_username\", \"location\", \"company\"];\n        const payload: Record<string, string> = {};\n        for (const key of allowed) {\n            if (key in body) {\n                payload[key] = body[key] ?? \"\";\n            }\n        }\n\n        const res = await fetch(\"https://api.github.com/user\", {\n            method: \"PATCH\",\n            headers: {\n                Authorization: `Bearer ${session.user.accessToken}`,\n                Accept: \"application/vnd.github+json\",\n                \"Content-Type\": \"application/json\",\n            },\n            body: JSON.stringify(payload),\n        });\n\n        if (!res.ok) {\n            const err = await res.json().catch(() => ({}));\n            return NextResponse.json(\n                { error: err.message || \"failed to update profile\" },\n                { status: res.status }\n            );\n        }\n\n        const data: GitHubProfileUpdateResponse = await res.json();\n        return NextResponse.json({\n            name: data.name,\n            bio: data.bio,\n            blog: data.blog,\n            twitter_username: data.twitter_username,\n            location: data.location,\n            company: data.company,\n        });\n    } catch {\n        return NextResponse.json({ error: \"failed to update profile\" }, { status: 500 });\n    }\n}"}]}
-
-**Reviewer**: REJECTED x2: The new file `apps/web/src/types/github.ts` was not created, which is essential for the proposed type safety improvements. The `search: ""` pattern for file creation or initial content insertion appears to be failing consistently. Please find an alternative, reliable method to create `apps/web/src/types/github.ts` with the specified interfaces. Once the file creation is confirmed to work, the subsequent edits to `apps/web/src/app/api/github/user/route.ts` should be re-applied.
-
----
-
-## Cycle 1774673735
+1774673735
 **Scanner**: ## SCANNER ANALYSIS: HOLYKEYZ/git-pulse
 
 ### Step 1: Codebase Understanding
@@ -6711,5 +6616,72 @@ The most valuable improvement is to address the potential **Logic/Consistency Is
 **Executor**: {"title": "[LOGIC] Fix userId in Reaction Creation", "body": "### Problem / Gap\nThe code in `apps/web/src/app/api/posts/[id]/reactions/route.ts` uses `session.user.id` when creating a new reaction, which could lead to data integrity issues if the external authentication provider's ID format or value differs from the internal database's primary key for users.\n\n### Solution & Insight\nUpdate the `userId` property in the `data` object of the `prisma.reaction.create` call to use the `id` from the locally fetched `user` object, ensuring referential integrity and correct data association within the application's database schema.\n\n### Impact\nFixes a potential bug that could lead to data integrity problems.", "branch_name": "bot/fix-reaction-user-id-1774687410", "edits": [{"file": "apps/web/src/app/api/posts/[id]/reactions/route.ts", "search": "userId: session.user.id", "replace": "userId: user.id"}]}
 
 **Reviewer**: APPROVE: The Executor's proposed edit correctly addresses a critical logic and data integrity issue identified by the Scanner. By changing `userId: session.user.id` to `userId: user.id` in the `prisma.reaction.create` call, the foreign key relationship in the `Reaction` table will correctly reference the local database `User.id`, ensuring consistency and referential integrity. The search block is exact, the change is functional, valuable, and aligns perfectly with the Scanner's recommendation. The diff preview confirms the intended, non-destructive change.
+
+---
+
+## Cycle 1774690842
+**Scanner**: ## Codebase Understanding
+
+This repository, `git-pulse`, appears to be a web application designed to track and display GitHub-related activities and social interactions, similar to a personalized feed or dashboard. It integrates with GitHub for user authentication and data fetching, providing features like user profiles, notifications, and repository displays.
+
+The file `apps/web/src/components/Sidebar.tsx` is a React server component responsible for rendering the main navigation sidebar of the web application. It displays links to various sections like Home, Profile, Settings, and Notifications, conditionally based on the user's authentication status. It also includes a user card with a logout option.
+
+The file `apps/web/src/lib/utils.ts` contains general utility functions used across the web application. Specifically, it provides `getRelativeTime` for formatting timestamps into human-readable relative time strings (e.g., "5m ago") and `isValidHttpUrl` for validating URL formats.
+
+The codebase primarily uses Next.js for its web framework, React for UI components, Tailwind CSS for styling, and `@primer/octicons-react` for icons. It leverages server components for data fetching and server actions for mutations like signing out.
+
+## Deep Analysis
+
+### apps/web/src/components/Sidebar.tsx
+
+*   **Logic/Features**: The "Post" button currently links to the root path (`/`). This is likely a placeholder and represents a missing feature or an incomplete implementation, as a "Post" button typically leads to a content creation page or modal.
+*   **Consistency/UI**: The `NotificationBell` component, when rendered, is directly placed within a `div` that provides `group flex items-center w-fit`. However, other primary navigation links (Home, Profile, Settings) have an *additional* inner `div` that applies specific padding, rounded corners, and hover effects (`px-4 py-3 rounded-full hover:bg-git-hover transition-colors`). This inconsistency means the `NotificationBell` does not visually align with the other navigation items in terms of padding, shape, and hover interaction, leading to a disjointed user interface.
+*   **Consistency/Styling**: The `MarkGithubIcon` uses explicit `fill-git-text group-hover:fill-git-accent` for its color styling, while other icons like `HomeIcon`, `PersonIcon`, and `GearIcon` use `fill-current`. While `fill-current` inherits color from the parent, this difference in explicit vs. inherited styling is a minor inconsistency in the approach to icon coloring.
+*   **Architecture**: The use of an `async` server component for fetching session data and a server action for `signOut` is consistent with modern Next.js patterns. The `try...catch` block around `auth()` for static generation is a good practice.
+
+### apps/web/src/lib/utils.ts
+
+*   **Logic**: The `getRelativeTime` function uses approximate calculations for months (30 days) and years (365 days). While common for relative time displays, this is not perfectly accurate for calendar months or leap years. This is a minor logical inaccuracy rather than a bug, as the intent is usually to provide a general sense of time rather than precise calendar calculations.
+*   **Security**: The `isValidHttpUrl` function is a good utility for validating URLs, which is crucial for preventing potential security vulnerabilities like open redirects or script injection if URLs were to be used in contexts like `href` attributes without proper validation. This aligns with previous security enhancements in the repository (e.g., PR #60).
+
+### README.md
+
+*   **DX**: The prompt indicates "No README found" for `README.md`. If the file exists but is empty, or if it's missing entirely, this is a significant developer experience and documentation gap for a public repository. A comprehensive README is essential for new contributors and users to understand, set up, and run the project.
+
+## Pick ONE Improvement
+
+The most valuable improvement is to address the **inconsistent styling of the `NotificationBell` component** in `apps/web/src/components/Sidebar.tsx`. This is a UI/consistency issue that directly impacts the visual cohesion and user experience of the main navigation. It's a code-level fix that will make the application feel more polished and professional.
+
+## Executor's Plan
+
+**WHAT**:
+Ensure the `NotificationBell` component in the sidebar has consistent styling and hover effects with other primary navigation links. This involves wrapping the `NotificationBell` with an additional `div` element that applies the standard navigation item styling.
+
+**WHERE**:
+In the file `apps/web/src/components/Sidebar.tsx`, locate the conditional rendering block for `session?.user` that contains the `NotificationBell` component. Specifically, find the `div` element with the classes `group flex items-center w-fit` that directly wraps the `NotificationBell`.
+
+**WHY**:
+Currently, the `NotificationBell` component is rendered without the specific padding, rounded corners, and hover background (`px-4 py-3 rounded-full hover:bg-git-hover transition-colors`) that are applied to other navigation items like "Home", "Profile", and "Settings". This visual discrepancy creates an inconsistent user interface in the main sidebar, making the `NotificationBell` appear out of place compared to its neighboring navigation elements. Applying the consistent wrapper styling will improve the overall aesthetic and user experience of the application.
+
+**HOW**:
+1.  Navigate to the `apps/web/src/components/Sidebar.tsx` file.
+2.  Locate the following JSX block, which conditionally renders the `NotificationBell`:
+    ```html
+    {session?.user && (
+        <div className="group flex items-center w-fit">
+            <NotificationBell />
+        </div>
+    )}
+    ```
+3.  Modify this block by inserting a new `div` element *inside* the existing `div` (the one with `className="group flex items-center w-fit"`) and *around* the `<NotificationBell />` component.
+4.  Apply the following Tailwind CSS classes to this newly inserted inner `div`: `flex items-center gap-5 px-4 py-3 rounded-full hover:bg-git-hover transition-colors`.
+5.  The resulting JSX structure for the `NotificationBell` should visually match the structure of other navigation links, such as the "Home" link, ensuring consistent styling and hover behavior.
+
+**SCOPE**:
+This change is confined to the `apps/web/src/components/Sidebar.tsx` file. It is a targeted UI consistency improvement that does not require modifications to other files or components.
+
+**Executor**: {"title": "[LOGIC] Consistent Styling for NotificationBell", "body": "### Problem / Gap\nThe NotificationBell component in the sidebar lacks consistent styling with other primary navigation links.\n\n### Solution & Insight\nWrap the NotificationBell component with a div that applies the standard navigation item styling.\n\n### Impact\nImproved user interface consistency in the main sidebar.", "branch_name": "bot/consistent-notification-bell", "edits": [{"file": "apps/web/src/components/Sidebar.tsx", "search": "    {session?.user && (\n        <div className=\"group flex items-center w-fit\">\n            <NotificationBell />\n        </div>\n    )}", "replace": "    {session?.user && (\n        <div className=\"group flex items-center w-fit\">\n            <div className=\"flex items-center gap-5 px-4 py-3 rounded-full hover:bg-git-hover transition-colors\">\n                <NotificationBell />\n            </div>\n        </div>\n    )}"}]}
+
+**Reviewer**: APPROVE: The Executor's proposed edit directly addresses the identified UI inconsistency in the `Sidebar.tsx` file by wrapping the `NotificationBell` component with the correct styling `div`. The search block is an exact match, which is crucial for this repository given past issues. The change is functional, valuable, and perfectly aligned with the Scanner's plan, improving the visual consistency and user experience of the navigation.
 
 ---
