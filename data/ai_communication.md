@@ -6743,3 +6743,79 @@ This change is a focused, single-file modification that corrects a type definiti
 **Reviewer**: APPROVE: The Executor's proposed edits correctly address the type safety and logical inconsistency identified by the Scanner. In Next.js, `params` are typically plain objects, not Promises, when passed to `generateMetadata` and page components. The changes accurately update the `PageProps` interface and remove the redundant `await` keywords, improving code correctness, readability, and adherence to Next.js conventions. The diff is clean and non-destructive.
 
 ---
+
+## Cycle 1774702870
+**Scanner**: ### Step 1: Codebase Understanding
+
+This repository, `git-pulse`, appears to be a social feed application that integrates with GitHub. Users can view and interact with posts, compose new updates or "ship" releases, and manage their GitHub profile information.
+
+*   **`apps/web/src/app/api/github/user/route.ts`**: This file defines API endpoints for fetching and updating the authenticated user's GitHub profile data. It acts as a secure proxy between the frontend and the GitHub API, handling authentication and data sanitization for updates.
+*   **`package.json` (root)**: This is the workspace configuration file for the monorepo, defining top-level scripts and engine requirements. It orchestrates commands for the `web` application within the workspace.
+*   **`apps/web/src/components/FeedClient.tsx`**: This is a client-side React component responsible for rendering the main user feed. It manages different feed tabs (Discover, Following, Activity), allows users to compose new posts or ship releases, and displays real-time updates using Server-Sent Events (SSE). It also includes logic for displaying loading states and empty messages.
+
+The codebase uses Next.js for its full-stack capabilities (API routes, client/server components), React for UI development, and TypeScript for type safety. It follows a monorepo structure managed by pnpm and uses Tailwind CSS for styling. Authentication is handled via `next-auth` (implied by the `auth()` function).
+
+### Step 2: Deep Analysis
+
+#### `apps/web/src/app/api/github/user/route.ts`
+
+*   **Security**: The `PATCH` endpoint correctly whitelists allowed fields (`name`, `bio`, `blog`, `twitter_username`, `location`, `company`) to prevent mass assignment vulnerabilities. Authentication is enforced by checking for `session?.user?.accessToken`. Generic error messages are returned, which is good security practice to avoid leaking internal details.
+*   **Logic**: The `PATCH` endpoint sets payload values to an empty string (`""`) if the incoming `body` field is `null` or `undefined`. While this prevents `null` values from being sent, GitHub's API often interprets `null` as a directive to *clear* a field. Sending an empty string might be treated as a valid, empty value rather than clearing the field, which could be a subtle logical discrepancy depending on the intended behavior.
+*   **Performance**: Direct `fetch` calls to the GitHub API are made. For the `GET` endpoint, if this route is frequently accessed, a short-lived server-side cache could improve performance, similar to the in-memory cache implemented for GitHub contributions (as noted in global memory, PR #73).
+*   **Architecture**: Consistent use of `NextResponse.json` for API responses and structured error handling.
+*   **Consistency**: The `GET` endpoint returns `avatar_url` and `login` in addition to the updatable fields, which is consistent with what can be fetched versus what can be modified.
+
+#### `package.json` (root)
+
+*   **Architecture**: Clearly defines a pnpm monorepo workspace.
+*   **DX**: Provides clear top-level scripts for `dev`, `build`, and `lint` that delegate to the `web` app. Specifies a Node.js engine requirement.
+
+#### `apps/web/src/components/FeedClient.tsx`
+
+*   **Logic**:
+    *   **Inconsistent Timestamp Formatting**: The `formatRelativeTimestamp` utility function is defined locally within `FeedClient.tsx`. It is *only* applied to new posts received via Server-Sent Events (SSE). The initial `discoverPosts`, `followingPosts`, and `activityPosts` (passed as props) are displayed with their raw timestamps. This leads to an inconsistent user experience where some posts show "X minutes ago" and others show a full date-time string.
+    *   **Duplicated Utility**: Global memory indicates that a `formatRelativeTime` utility was introduced in PR #63 for `RepoCard`. The `formatRelativeTimestamp` function in `FeedClient.tsx` is a duplicate implementation of this functionality, leading to code redundancy.
+    *   **Artificial Loading State**: The `handleTabChange` function uses a `setTimeout(300)` to simulate a loading state (`isTabLoading`). While this can improve UX by providing visual feedback, it's not tied to actual data fetching. If tab data were fetched on demand, this loading state should reflect the actual fetch operation. Given the data is passed as props, this is a minor point but worth noting.
+*   **Architecture**: The `formatRelativeTimestamp` function is a general utility that should ideally reside in a shared utility file (e.g., `@/lib/utils`) rather than being defined directly within a component. This promotes reusability and better separation of concerns.
+*   **Performance**: The `formatRelativeTimestamp` function itself is lightweight and unlikely to cause performance issues. SSE is an efficient mechanism for real-time updates.
+*   **DX**: Centralizing utility functions like `formatRelativeTimestamp` would improve developer experience by making them easily discoverable and reusable across the application.
+*   **Consistency**: The most significant issue is the inconsistent application of timestamp formatting across different data sources within the same component.
+
+### Step 3: Pick ONE Improvement
+
+The most valuable improvement is to address the **inconsistent timestamp formatting and duplicated utility function** in `apps/web/src/components/FeedClient.tsx`. This is a logic and consistency bug that directly impacts user experience and introduces unnecessary code duplication. Leveraging the existing `formatRelativeTime` utility will centralize this logic and ensure a consistent display of timestamps across all posts in the feed.
+
+### Step 4: Write the Executor's Plan
+
+**WHAT** to change:
+The `FeedClient.tsx` component currently defines a local `formatRelativeTimestamp` function and applies it only to posts received via Server-Sent Events (SSE). This results in initial posts (passed as props) displaying raw timestamps while live updates show relative times, creating an inconsistent user experience. The plan is to remove this local, duplicated function, import the existing `formatRelativeTime` utility from `@/lib/utils`, and apply this utility consistently to all posts (initial `discoverPosts`, `followingPosts`, `activityPosts`, and new SSE posts) to ensure uniform relative time formatting throughout the feed.
+
+**WHERE** in the file(s):
+*   `apps/web/src/components/FeedClient.tsx`:
+    *   The `formatRelativeTimestamp` function definition.
+    *   The `useEffect` hook where `eventSource.onmessage` processes new posts.
+    *   The `useState` initialization for `liveDiscover`.
+    *   The `postsMap` object initialization.
+    *   The import section at the top of the file.
+
+**WHY** this matters:
+This improvement is critical for several reasons:
+1.  **Enhanced User Experience**: By consistently formatting all timestamps to relative time (e.g., "5 minutes ago", "2 days ago"), the user interface becomes more intuitive and easier to read. The current mix of raw and relative timestamps is jarring and confusing for users.
+2.  **Improved Code Maintainability and Consistency**: The `formatRelativeTimestamp` function is a duplicate of the `formatRelativeTime` utility that already exists in the codebase (as indicated by global memory, PR #63). Removing this duplication adheres to the DRY (Don't Repeat Yourself) principle, centralizes the logic for relative time formatting, and makes the codebase easier to maintain and reason about. Any future updates to how relative time is calculated will only need to be made in one place.
+3.  **Better Architectural Design**: Extracting utility functions into shared modules (`@/lib/utils`) is a standard practice that improves modularity, reusability, and testability of the codebase. This change aligns `FeedClient.tsx` with this architectural pattern.
+
+**HOW** to do it:
+1.  **Remove the local function**: Locate the `formatRelativeTimestamp` function definition in `apps/web/src/components/FeedClient.tsx`. This function starts with `function formatRelativeTimestamp(timestamp: string)` and ends before the `export default function FeedClient(...)` line. Remove this entire function block.
+2.  **Add import statement**: At the top of `apps/web/src/components/FeedClient.tsx`, add an import for `formatRelativeTime` from `@/lib/utils`. This import should be placed with other utility imports, typically after React imports and before component imports.
+3.  **Format initial `discoverPosts`**: Locate the `useState` declaration for `liveDiscover`: `const [liveDiscover, setLiveDiscover] = useState<PostProps[]>(discoverPosts);`. Modify the initial state to map over `discoverPosts` and apply `formatRelativeTime` to each post's `timestamp` property. The new initial state should be `discoverPosts.map(post => ({ ...post, timestamp: formatRelativeTime(post.timestamp) }))`.
+4.  **Format `followingPosts` and `activityPosts` in `postsMap`**: Locate the `postsMap` object definition. Modify the assignments for `following` and `activity` to map over `followingPosts` and `activityPosts` respectively, applying `formatRelativeTime` to each post's `timestamp`. For example, `following: followingPosts.map(post => ({ ...post, timestamp: formatRelativeTime(post.timestamp) }))`.
+5.  **Format SSE posts**: Locate the `eventSource.onmessage` handler within the `useEffect` hook. Inside the `if (data.type === "NEW_POST" && data.post)` block, find the line `const formattedPost = { ...data.post, timestamp: formatRelativeTimestamp(data.post.timestamp) };`. Change this line to use the imported `formatRelativeTime` function instead of the now-removed local function. The updated line will be `const formattedPost = { ...data.post, timestamp: formatRelativeTime(data.post.timestamp) };`.
+
+**SCOPE**:
+This change is entirely contained within `apps/web/src/components/FeedClient.tsx` and involves leveraging an existing utility from `@/lib/utils`. No other files in the repository need to be modified.
+
+**Executor**: {"title": "[REFACTOR] Unify Timestamp Formatting in FeedClient", "body": "### Problem / Gap\nThe `FeedClient.tsx` component has an inconsistent timestamp formatting. The initial posts display raw timestamps, while live updates show relative times. This inconsistency affects the user experience.\n\n### Solution & Insight\nTo address this issue, we will remove the local `formatRelativeTimestamp` function and import the existing `formatRelativeTime` utility from `@/lib/utils`. We will then apply this utility consistently to all posts.\n\n### Impact\nThis change improves the user experience by providing a uniform timestamp format throughout the feed. It also promotes code maintainability and consistency by centralizing the timestamp formatting logic.", "branch_name": "bot/unify-timestamp-formatting-1774702870", "edits": [{"file": "apps/web/src/components/FeedClient.tsx", "search": "function formatRelativeTimestamp(timestamp: string) {\n  const date = new Date(timestamp);\n  const now = new Date();\n  const diff = now.getTime() - date.getTime();\n  const minutes = Math.floor(diff / 1000 / 60);\n  if (minutes < 1) return 'Just now';\n  if (minutes < 60) return `${minutes} minute${minutes > 1 ? 's' : ''} ago`;\n  const hours = Math.floor(minutes / 60);\n  if (hours < 24) return `${hours} hour${hours > 1 ? 's' : ''} ago`;\n  const days = Math.floor(hours / 24);\n  return `${days} day${days > 1 ? 's' : ''} ago`;\n}", "replace": ""}, {"file": "apps/web/src/components/FeedClient.tsx", "search": "import React, { useState, useEffect } from 'react';\nimport SearchBar from '@/components/SearchBar';\nimport ComposeFeed from '@/components/ComposeFeed';\nimport ShipItForm from '@/components/ShipItForm';\nimport PostCard, { PostProps } from '@/components/PostCard';", "replace": "import React, { useState, useEffect } from 'react';\nimport SearchBar from '@/components/SearchBar';\nimport ComposeFeed from '@/components/ComposeFeed';\nimport ShipItForm from '@/components/ShipItForm';\nimport PostCard, { PostProps } from '@/components/PostCard';\nimport { formatRelativeTime } from '@/lib/utils';"}, {"file": "apps/web/src/components/FeedClient.tsx", "search": "const [liveDiscover, setLiveDiscover] = useState<PostProps[]>(discoverPosts);", "replace": "const [liveDiscover, setLiveDiscover] = useState<PostProps[]>(discoverPosts.map(post => ({ ...post, timestamp: formatRelativeTime(post.timestamp) })));"}, {"file": "apps/web/src/components/FeedClient.tsx", "search": "const postsMap: Record<TabType, PostProps[]> = {\n  discover: liveDiscover,\n  following: followingPosts,\n  activity: activityPosts\n};", "replace": "const postsMap: Record<TabType, PostProps[]> = {\n  discover: liveDiscover,\n  following: followingPosts.map(post => ({ ...post, timestamp: formatRelativeTime(post.timestamp) })),\n  activity: activityPosts.map(post => ({ ...post, timestamp: formatRelativeTime(post.timestamp) }))\n};"}, {"file": "apps/web/src/components/FeedClient.tsx", "search": "const formattedPost = { ...data.post, timestamp: formatRelativeTimestamp(data.post.timestamp) };", "replace": "const formattedPost = { ...data.post, timestamp: formatRelativeTime(data.post.timestamp) };"}]}
+
+**Reviewer**: CORRECT: The Executor's plan is sound and aligns perfectly with the Scanner's recommendation to centralize timestamp formatting and improve UX. The search blocks are accurate. However, the `replace` blocks for the `liveDiscover` useState, `postsMap` object, and `formattedPost` variable in the SSE handler introduce indentation errors. This is a recurring issue for this repository, as noted in global memory. I have corrected the indentation to ensure the patched code is syntactically valid and maintains the original formatting.
+
+---
