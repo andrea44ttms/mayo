@@ -6883,92 +6883,7 @@ The current state of `apps/web/src/lib/algo.ts` contains a critical syntax error
 
 ---
 
-## Cycle 1774733551
-**Scanner**: # SCANNER ANALYSIS: HOLYKEYZ/git-pulse
-
-## Step 1: Codebase Understanding
-
-*   **What does this repository do?**
-    The `git-pulse` repository is a social media platform for developers, integrating with GitHub to display trending repositories, developers, and user-generated content (posts, reactions). It aims to provide a feed of relevant developer activity and facilitate collaboration.
-
-*   **What do the target files do within the repo?**
-    *   `apps/web/src/components/ComposeFeed.tsx`: This component provides the user interface for creating new posts. It allows users to input text (with Markdown support), attach images, preview their post, and submit it to the backend.
-    *   `packages/ui/tsconfig.json`: This file configures TypeScript for the `ui` package, defining compiler options, included files, and path aliases specific to the shared UI components.
-    *   `apps/web/src/components/RightSidebar.tsx`: This server component displays various dynamic content on the right side of the application's layout. It fetches and renders trending GitHub repositories and developers, upcoming projects, most active projects, and suggested users to follow, combining data from GitHub APIs and the local database.
-
-*   **What patterns, frameworks, or conventions does the codebase use?**
-    The codebase uses Next.js for server-side rendering and API routes, React for UI development (including client and server components), TypeScript for type safety, and Tailwind CSS for styling. It follows a monorepo structure with `pnpm` workspaces. Data fetching often involves asynchronous operations and `Promise.all` for parallel execution. Prisma is used for database interactions, and NextAuth.js for authentication. Markdown rendering is handled by `ReactMarkdown` with `remark-gfm`.
-
-## Step 2: Deep Analysis
-
-*   **Security**:
-    *   `ComposeFeed.tsx`: The direct rendering of user-uploaded `Data URL`s via `img src={img}` (with `eslint-disable-next-line`) in the image preview section could be a concern if the backend doesn't robustly validate and re-process image uploads. While `Data URL`s are generally safer than external URLs, very large or malformed ones could theoretically impact performance or browser stability. The primary security control should be on the server-side `/api/posts` endpoint.
-    *   `RightSidebar.tsx`: Direct use of `repo.html_url` in `<a>` tags is generally safe when sourced from a trusted API like GitHub. However, if the source of `repo.html_url` were less trusted or could be manipulated, it could lead to open redirect vulnerabilities.
-
-*   **Logic**:
-    *   `ComposeFeed.tsx`: The conditional logic for `handleSubmit` (`if (!content.trim() && images.length === 0 || content.length > maxLength || isSubmitting) return;`) is functionally correct but could benefit from clearer parenthesization for readability: `if ((!content.trim() && images.length === 0) || content.length > maxLength || isSubmitting) return;`.
-    *   `RightSidebar.tsx`: The fallback logic for `suggestedUsers` (`if (suggestedUsers.length < 5 && token)`) appends GitHub-suggested developers to the list. There's no de-duplication step, meaning a user fetched from Prisma could potentially also appear in the GitHub suggestions, leading to duplicate entries in the "Who to follow" list.
-    *   `RightSidebar.tsx`: The `upcomingProjects` and `activeProjects` mapping functions use `repo: any`. This bypasses TypeScript's type checking, making it harder to catch potential issues if the GitHub API response structure changes or if properties are accessed incorrectly.
-
-*   **Performance**:
-    *   `ComposeFeed.tsx`: Converting images to `Data URL`s (base64 strings) on the client-side and sending them directly in the JSON payload can be inefficient for larger images, increasing request size and processing overhead. For optimal performance and scalability, images are typically uploaded as raw files to a dedicated storage service (e.g., S3) and their URLs are then sent to the API.
-    *   `RightSidebar.tsx`: While `Promise.all` is used for parallel fetching, the component makes several external API calls. Ensuring robust caching mechanisms are in place for all these GitHub API calls (beyond what's mentioned in Global Memory for contributions and trending tags) is crucial to prevent redundant fetches and improve load times.
-
-*   **Architecture**:
-    *   `RightSidebar.tsx`: The component directly orchestrates multiple data fetches and combines data from different sources. While suitable for server components, as the complexity grows, abstracting data fetching logic into dedicated hooks or service layers could improve modularity and testability.
-    *   `RightSidebar.tsx`: The lack of specific types for GitHub repository objects (using `repo: any`) indicates a potential architectural gap in defining shared data structures for external API responses.
-
-*   **Features**:
-    *   `ComposeFeed.tsx`: The Markdown processing for `#hashtags` and `@mentions` currently generates self-referential links (e.g., `[#tag](#tag)`). This is incomplete; these should ideally link to a search page (e.g., `/search?q=%23tag`) or a user profile page (e.g., `/profile/@username`) respectively. This is a significant missing interactive feature.
-    *   `ComposeFeed.tsx`: No user-facing error message is displayed if the post submission fails; errors are only logged to the console.
-    *   `RightSidebar.tsx`: The "Who to follow" section provides a link to the user's profile but no direct "Follow" action button, requiring an extra navigation step for a common interaction.
-
-*   **Testing**:
-    *   The provided files do not include explicit test files. Client-side components like `ComposeFeed` and server components like `RightSidebar` would benefit from unit and integration tests to ensure functionality, especially given the complex data fetching and user interaction.
-
-*   **DX (Developer Experience)**:
-    *   `ComposeFeed.tsx`: Hardcoded values like `maxLength = 280` could be moved to a constant file for easier management. Inline styles (`background: '#010409'`, `padding: '12px'`) and hardcoded Tailwind colors (`bg-[#0d1117]`) could be replaced with named Tailwind classes for consistency and easier theming.
-    *   `RightSidebar.tsx`: The use of `repo: any` reduces type safety and makes the component harder to understand and maintain without inspecting the data fetching functions.
-
-*   **Consistency**:
-    *   `ComposeFeed.tsx`: Inconsistent use of hardcoded colors (`bg-[#0d1117]` vs. `background: '#010409'`) for similar background elements. This violates the principle of centralized custom colors, which has been a focus in recent approved PRs (e.g., #70, #78, #79).
-    *   `RightSidebar.tsx`: Frequent use of arbitrary `text-[15px]` and `text-[13px]` values. While functional, defining these as named text sizes in `tailwind.config.ts` would improve consistency.
-
-*   **Dead Code**:
-    *   No immediately obvious dead code in the provided snippets.
-
-## Step 3: Pick ONE Improvement
-
-The most valuable improvement is to fix the **incomplete Markdown link generation for hashtags and mentions in `ComposeFeed.tsx`**. This is a core interactive feature that is currently broken from a user experience perspective, making the platform less functional and engaging. It directly impacts user interaction with generated content.
-
-## Step 4: Write the Executor's Plan
-
-**WHAT** to change
-The current Markdown processing in `apps/web/src/components/ComposeFeed.tsx` for hashtags and mentions generates links that point back to the hashtag or mention itself (e.g., `[#tag](#tag)`). This needs to be updated to generate functional links: hashtags should link to a search results page (e.g., `/search?q=%23hashtag`), and mentions should link to the respective user's profile page (e.g., `/profile/@username`).
-
-**WHERE** in the file(s)
-The change will be in `apps/web/src/components/ComposeFeed.tsx`, specifically within the `ReactMarkdown` component's `children` prop, where the `content` string is pre-processed using `replace` methods.
-
-**WHY** this matters
-This matters because the current implementation of Markdown links for hashtags and mentions is functionally incomplete. Users expect to be able to click on these elements and navigate to relevant content (search results for hashtags, user profiles for mentions). Without this, the feature is misleading and reduces the interactivity and utility of the platform, hindering user experience and engagement. It's a core social media feature that is currently broken from a user interaction perspective.
-
-**HOW** to do it
-1.  Locate the `ReactMarkdown` component within the `ComposeFeed.tsx` file.
-2.  Find the `children` prop of `ReactMarkdown`, which currently contains a chain of `content.replace(...)` calls.
-3.  Modify the first `replace` call, which targets hashtags (`/(^|\s)(#[\w-]+)/g`). The replacement string should be changed from `'$1[$2]($2)'` to `'$1[$2](/search?q=$2)'`. This will create a link to the `/search` route with the hashtag as a query parameter.
-4.  Modify the second `replace` call, which targets mentions (`/(^|\s)(@[\w-]+)/g`). The replacement string should be changed from `'$1[$2]($2)'` to `'$1[$2]/profile/$2)'`. This will create a link to the `/profile` route with the username as a path parameter.
-5.  Ensure that the generated URLs are correctly formatted for Next.js routing. For hashtags, the `#` symbol in the URL query parameter should be URL-encoded (e.g., `%23`). The current regex captures `#[\w-]+` as `$2`, so the replacement should be `'$1[#$2](/search?q=%23$2)'` to include the `#` in the displayed text and correctly encode it in the URL. For mentions, the `@` symbol is typically not part of the URL path, so the replacement should be `'$1[@$2](/profile/$2)'` to include `@` in the displayed text but not in the path.
-
-**SCOPE**
-This change is localized to the `apps/web/src/components/ComposeFeed.tsx` file. It modifies the client-side rendering logic for user-generated content to correctly interpret and link hashtags and mentions, enhancing the interactive functionality of posts. No other files need to be modified for this specific improvement, as the routing for `/search` and `/profile` is assumed to already exist.
-
-**Executor**: {"title": "[FEAT] Enhance Markdown Link Generation for Hashtags and Mentions", "body": "### Problem / Gap\nThe current Markdown processing in `ComposeFeed.tsx` generates incomplete links for hashtags and mentions, reducing the interactive functionality of posts.\n\n### Solution & Insight\nUpdate the `replace` calls within the `ReactMarkdown` component to correctly generate links for hashtags and mentions. Hashtags should link to a search results page, and mentions should link to the respective user's profile page.\n\n### Impact\nThis improvement enhances user engagement by providing functional links within posts, making it easier for users to discover related content and interact with each other.", "branch_name": "bot/upgrade-1774733551", "edits": [{"file": "apps/web/src/components/ComposeFeed.tsx", "search": "content.replace(/(^|\\s)(#[\\w-]+)/g, '$1[$2]($2)').replace(/(^|\\s)(@[\\w-]+)/g, '$1[$2]($2)')", "replace": "content.replace(/(^|\\s)(#[\\w-]+)/g, '$1[#$2](/search?q=%23$2)').replace(/(^|\\s)(@[\\w-]+)/g, '$1[@$2](/profile/$2)')"}]}
-
-**Reviewer**: APPROVE: The Executor's proposed edit precisely implements the Scanner's plan to fix the incomplete Markdown link generation for hashtags and mentions in `ComposeFeed.tsx`. The search string is an exact match, and the replacement correctly generates functional links to search pages for hashtags (with URL encoding) and profile pages for mentions. This is a valuable, non-destructive, and well-aligned improvement that enhances user experience.
-
----
-
-## Cycle 1774737156
+1774737156
 **Scanner**: **SCANNER ANALYSIS: HOLYKEYZ/git-pulse**
 
 ### Step 1: Codebase Understanding
@@ -7266,5 +7181,69 @@ The current error logging for GitHub API interactions, such as `console.error("G
 **Executor**: {"title": "[LOGIC] Enhance Error Logging for GitHub API Sync Failures", "body": "### Problem / Gap\nThe current error logging for GitHub API interactions in the follow/unfollow API route is too generic, making it difficult to diagnose issues in production logs.\n\n### Solution & Insight\nEnhance the error logging messages to include the specific username involved in the failed operation, providing more context for debugging.\n\n### Impact\nImproved debuggability and operational visibility of the follow/unfollow feature, allowing developers to quickly identify and investigate specific failures.", "branch_name": "bot/upgrade-1774761205", "edits": [{"file": "apps/web/src/app/api/users/[username]/follow/route.ts", "search": "console.error(\"GitHub unfollow sync failed:\", err)", "replace": "console.error(`GitHub unfollow sync failed for ${targetUsername}:`, err)"}, {"file": "apps/web/src/app/api/users/[username]/follow/route.ts", "search": "console.error(\"GitHub follow sync failed:\", err)", "replace": "console.error(`GitHub follow sync failed for ${targetUsername}:`, err)"}]}
 
 **Reviewer**: APPROVE: The Executor's proposed edits are precise, functional, and directly address the Scanner's recommendation to enhance error logging with contextual information. The changes improve debuggability without introducing any new issues or breaking existing logic. The search blocks are exact matches, and the replacement code is valid.
+
+---
+
+## Cycle 1774768098
+**Scanner**: ### Step 1: Codebase Understanding
+
+This repository, `git-pulse`, appears to be a web application built with Next.js and React, designed to display and interact with GitHub-related data, such as user profiles, repositories, and contributions. It likely serves as a personalized GitHub dashboard or a tool for exploring developer activity.
+
+The file `apps/web/src/lib/colors.ts` centralizes a mapping of programming language names to their corresponding hex colors, along with a utility function `getLanguageColor` to retrieve these colors or a default if a language is not found.
+The file `apps/web/src/components/PinnedRepos.tsx` is a React component responsible for rendering a user's pinned GitHub repositories. It fetches and displays details like repository name, description, primary language, star count, and fork count.
+The file `apps/web/package.json` lists the project's dependencies and dev dependencies, indicating the use of Next.js 15, React 19, Tailwind CSS, Prisma for database interaction, NextAuth for authentication, and Octicons for UI icons.
+
+The codebase uses modern web development patterns including React components, Next.js for server-side rendering/routing, TypeScript for type safety, Tailwind CSS for utility-first styling, and Prisma for ORM. It follows a component-based architecture and seems to prioritize clear separation of concerns (e.g., `lib/colors.ts` for color utilities).
+
+### Step 2: Deep Analysis
+
+*   **Security**: No immediate security vulnerabilities are apparent in the provided snippets. The `target="_blank" rel="noopener noreferrer"` on external links is a good practice to prevent tabnabbing.
+*   **Logic**:
+    *   `getLanguageColor` in `colors.ts` correctly handles `null` or `undefined` language input by returning a default color.
+    *   `PinnedRepos.tsx` correctly checks `repos.length === 0` before rendering, preventing empty UI.
+    *   Conditional rendering for `repo.description`, `repo.primaryLanguage`, `repo.stargazerCount`, and `repo.forkCount` ensures elements only appear when data is available.
+    *   `toLocaleString()` is used for star and fork counts, which is good for internationalization and readability.
+*   **Performance**: No obvious performance bottlenecks in the provided code. The use of `toLocaleString()` is efficient.
+*   **Architecture**:
+    *   The separation of language colors into `lib/colors.ts` is a good architectural choice for reusability and maintainability.
+    *   The component structure in `PinnedRepos.tsx` is clear and focused.
+*   **Features**:
+    *   The `GrabberIcon` in `PinnedRepos.tsx` has an `aria-label="Drag to reorder repository"` and `cursor-grab` class. This strongly implies a drag-and-drop reordering feature for pinned repositories. However, the provided code snippet does not include any actual drag-and-drop logic (e.g., event handlers, state management for reordering). If this feature is not implemented, the icon and accessibility label are misleading, creating a potential UX gap or an incomplete feature.
+*   **Testing**: Not directly observable from the provided files, but the presence of `test_graphql_contributions.ts` suggests some testing exists.
+*   **DX (Developer Experience)**: The codebase seems to follow standard conventions. The use of path aliases (`@/lib/github`) is good for DX.
+*   **Consistency**:
+    *   In `PinnedRepos.tsx`, the repository name `<span>` uses a hardcoded hex color `text-[#2f81f7]`. This is inconsistent with the project's apparent use of Tailwind CSS utility classes and custom colors (e.g., `fill-git-muted`, `text-git-text`, `border-git-border`, `bg-git-card`). The `git-pulse` repository has a history of centralizing custom colors in `tailwind.config.ts` (as seen in previous approved PRs #70, #78, #79). This hardcoded value is an outlier.
+*   **Dead Code**: No dead code is immediately apparent in the provided snippets.
+
+### Step 3: Pick ONE Improvement
+
+The most valuable improvement is to address the **inconsistent color definition** for the repository name in `PinnedRepos.tsx`. This is a code quality and consistency issue that directly contradicts the project's established pattern of centralizing custom colors in `tailwind.config.ts`. Fixing this aligns with previous approved refactoring efforts and improves the maintainability of the styling. While the `GrabberIcon`'s implied feature is also notable, the hardcoded color is a more straightforward and immediate code-level consistency fix.
+
+### Step 4: Write the Executor's Plan
+
+**WHAT** to change:
+The hardcoded hex color `text-[#2f81f7]` used for the repository name in the `PinnedRepos` component needs to be replaced with a custom Tailwind CSS color variable. This new color variable should be defined in the project's `tailwind.config.ts` file.
+
+**WHERE** in the file(s):
+1.  In `apps/web/tailwind.config.ts`, within the `theme.extend.colors` object.
+2.  In `apps/web/src/components/PinnedRepos.tsx`, specifically on the `<span>` element that displays `repo.name`.
+
+**WHY** this matters:
+This change improves the consistency and maintainability of the application's styling. Hardcoded hex values bypass Tailwind's utility system, making it difficult to manage and update colors globally. By centralizing this color in `tailwind.config.ts`, it becomes a reusable utility class, aligning with the project's existing color management strategy and previous refactoring efforts to centralize custom colors (as seen in approved PRs #70, #78, #79). This enhances developer experience and reduces the likelihood of style inconsistencies.
+
+**HOW** to do it:
+1.  Open `apps/web/tailwind.config.ts`.
+2.  Locate the `theme.extend.colors` object.
+3.  Add a new property to the `colors` object, for example, `git-link-blue`, and assign it the hex value `#2f81f7`.
+4.  Open `apps/web/src/components/PinnedRepos.tsx`.
+5.  Find the `<span>` element that renders `repo.name`. This element currently has the `className` `text-sm font-semibold text-[#2f81f7] hover:underline truncate`.
+6.  Update the `className` of this `<span>` element to use the newly defined Tailwind color utility, changing `text-[#2f81f7]` to `text-git-link-blue`.
+
+**SCOPE**:
+This is a multi-file refactoring change affecting both `apps/web/tailwind.config.ts` and `apps/web/src/components/PinnedRepos.tsx`.
+
+**Executor**: {"title": "[REFACTOR] Centralize Repository Name Color in Tailwind Config", "body": "### Problem / Gap\nThe repository name in `PinnedRepos.tsx` uses a hardcoded hex color `#2f81f7`, which contradicts the project's pattern of centralizing custom colors in `tailwind.config.ts`.\n\n### Solution & Insight\nTo improve code consistency and maintainability, we will define a new color variable `git-link-blue` in `tailwind.config.ts` and update `PinnedRepos.tsx` to use this variable instead of the hardcoded color. This aligns with previous efforts to centralize custom colors and enhances the developer experience by making colors easier to manage globally.\n\n### Impact\nThis change improves the consistency of the application's styling, reduces the risk of style inconsistencies, and makes it easier to update colors globally by managing them in a single location.", "branch_name": "bot/upgrade-1774768098", "edits": [{"file": "apps/web/tailwind.config.ts", "search": "        // Add custom colors here", "replace": "        // Add custom colors here\n        'git-link-blue': '#2f81f7',"}, {"file": "apps/web/src/components/PinnedRepos.tsx", "search": "text-[#2f81f7]", "replace": "text-git-link-blue"}]}
+
+**Reviewer**: APPROVE: The Executor's proposed edits correctly address the identified inconsistency by centralizing a hardcoded color into `tailwind.config.ts` and then using the new utility class in `PinnedRepos.tsx`. This aligns perfectly with the Scanner's plan and previous successful refactoring efforts in this repository (e.g., PRs #70, #78, #79) to improve styling consistency and maintainability. The search blocks are precise, and the changes are non-destructive and functional.
 
 ---
