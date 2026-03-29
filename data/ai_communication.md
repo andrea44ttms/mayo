@@ -7202,85 +7202,7 @@ This improvement involves a cohesive change across two files: `apps/web/tailwind
 
 ---
 
-## Cycle 1774789313
-**Scanner**: ## Codebase Understanding
-
-This repository, `HOLYKEYZ/git-pulse`, appears to be a web application designed to showcase and discover developer projects, likely integrating with GitHub data. It provides features like post scoring, user authentication, and real-time notifications.
-
-*   **`apps/web/src/lib/algo.ts`**: This file defines the core algorithm for calculating a "quality score" for user-submitted posts, primarily based on the characteristics of an embedded GitHub repository. It includes factors like language, stars, forks, commit activity, and author influence.
-*   **`apps/web/src/app/api/notifications/stream/route.ts`**: This file implements a Server-Sent Events (SSE) endpoint to stream real-time unread notification counts to authenticated users. It polls the database at regular intervals to fetch updates.
-*   **`apps/web/package.json`**: This is the standard manifest file for the `web` application, listing its dependencies (e.g., Next.js, React, Prisma, Next-Auth, Google Generative AI client) and development scripts.
-
-The codebase uses a Next.js framework with React for the frontend, Prisma for database ORM, and Next-Auth for authentication. It follows typical API route conventions for Next.js and uses TypeScript for type safety.
-
-## Deep Analysis
-
-### Security
-*   **`apps/web/src/app/api/notifications/stream/route.ts`**: User authentication is performed using `auth()` and `session?.user?.id` is checked. The database query uses `session.user.username`, which is derived from the authenticated session, reducing direct user input vulnerability. No obvious injection points or hardcoded secrets in the provided snippets.
-
-### Logic
-*   **`apps/web/src/lib/algo.ts`**:
-    *   **Critical Syntax/Logic Error**: The `calculatePostScoreDetailed` function has a structural error where the closing brace `}` for the function body is placed prematurely after `score += breakdown.followerBias;`. This means the subsequent lines for "Time decay" calculation, `finalScore` assignment, and the `return` statement are outside the function's scope, leading to a compilation error or unexpected runtime behavior.
-    *   **Missing Stars Calculation**: The `breakdown.stars` property is initialized to `0` and then `score += breakdown.stars;` is executed, but there is no logic to actually calculate a value for `breakdown.stars` based on `factors.stars`. This means the number of stars a repository has currently does not contribute to the post's score, despite being an explicit factor in the `ScoreFactors` interface and `PostScoreDetail` breakdown. This is a significant bug in the scoring algorithm.
-
-### Performance
-*   **`apps/web/src/app/api/notifications/stream/route.ts`**: The SSE stream polls the database every 10 seconds for *each* connected user to check for unread notifications. While functional for a small user base, this approach can become a performance bottleneck and resource-intensive as the number of concurrent users grows, leading to frequent database queries. A more scalable solution would involve a pub/sub mechanism or WebSockets to push updates only when a notification state actually changes.
-
-### Architecture
-*   **`apps/web/src/lib/algo.ts`**: The hardcoded `noveltyLanguages` and `commonLanguages` arrays could be externalized into a configuration file or constants module if they are expected to change frequently or be managed dynamically. This is a minor architectural point.
-
-### Features
-*   No obvious missing features in the provided snippets, but the `algo.ts` file's scoring logic could be expanded with more factors or configurable weights.
-
-### Testing
-*   No test files are provided for analysis, so it's not possible to comment on testing coverage or patterns.
-
-### DX (Developer Experience)
-*   No specific DX issues in the provided files.
-
-### Consistency
-*   **`apps/web/src/lib/algo.ts`**: The `stars` factor is defined but not implemented, which is inconsistent with other factors like `forks` and `commitVolume` that have explicit calculation logic.
-
-### Dead Code
-*   **`apps/web/package.json`**: The `ws` package is listed as a dependency. However, the `notifications/stream/route.ts` file uses Server-Sent Events (SSE), not WebSockets, and `ws` is not used in the provided `algo.ts` file. If `ws` is not used elsewhere in the `web` application, it represents an unused dependency.
-
-## Pick ONE Improvement
-
-The most critical issues are the **syntax error and the missing `stars` calculation in `apps/web/src/lib/algo.ts`**. These are fundamental logic bugs that prevent the post scoring algorithm from functioning correctly as intended. Joseph's feedback on `git-pulse#92` specifically highlighted fixing critical bugs in algorithm scoring, making this the highest priority.
-
-## Executor's Plan
-
-**WHAT** to change:
-The `calculatePostScoreDetailed` function in `apps/web/src/lib/algo.ts` needs two critical logic fixes:
-1.  The function's closing brace is misplaced, causing the time decay and final score calculation to be outside the function body. This needs to be corrected to ensure the entire function executes as a single unit.
-2.  The `stars` factor, which is part of the `ScoreFactors` interface, is currently not being used in the score calculation. Logic needs to be added to assign a value to `breakdown.stars` based on `factors.stars` before it is added to the total score.
-
-**WHERE** in the file(s):
-The changes will be made exclusively in the `apps/web/src/lib/algo.ts` file, specifically within the `calculatePostScoreDetailed` function.
-
-**WHY** this matters:
-1.  **Critical Bug Fix**: The misplaced closing brace is a severe syntax error that will prevent the `calculatePostScoreDetailed` function from compiling or executing correctly. This means the time decay and final score logic will not be applied, leading to incorrect or non-functional post scores.
-2.  **Algorithm Accuracy**: The absence of a `stars` calculation means that a significant indicator of repository quality is entirely ignored by the scoring algorithm. Implementing this factor will make the `git-pulse` post scoring more accurate and reflective of a project's actual popularity and quality, aligning with the intent of the `ScoreFactors` interface. This directly addresses a critical bug in the algorithm's logic.
-
-**HOW** to do it:
-1.  **Correct Function Structure**:
-    *   Locate the line `score += breakdown.followerBias;` within the `calculatePostScoreDetailed` function.
-    *   Immediately after this line, there is an incorrect closing brace `}`. This brace should be removed.
-    *   The correct closing brace for the `calculatePostScoreDetailed` function should be moved to the very end of the file, after the `return { score: finalScore, breakdown };` statement. This will ensure the time decay and final score calculations are properly enclosed within the function.
-2.  **Implement Stars Scoring**:
-    *   Locate the line `score += breakdown.stars;` within the `calculatePostScoreDetailed` function.
-    *   Immediately *before* this line, insert a new line of code to calculate `breakdown.stars`. The calculation should be `breakdown.stars = Math.min(factors.stars * 0.1, 50);`. This will assign a value to `breakdown.stars` based on the number of stars, capped at a maximum of 50 points, before it is added to the total score.
-
-**SCOPE**:
-This improvement involves a focused, multi-line change within a single file (`apps/web/src/lib/algo.ts`) to correct critical logic and syntax errors in the core post scoring algorithm.
-
-**Executor**: {"title": "[LOGIC] Fix Critical Bugs in Algorithm Scoring", "body": "### Problem / Gap\nThe `calculatePostScoreDetailed` function in `apps/web/src/lib/algo.ts` contains a critical syntax error and a missing logic implementation for the `stars` factor. The misplaced closing brace causes the time decay and final score calculations to be outside the function's scope, leading to compilation errors or unexpected runtime behavior. Furthermore, the absence of a `stars` calculation means that the number of stars a repository has does not contribute to the post's score, despite being an explicit factor in the `ScoreFactors` interface.\n\n### Solution & Insight\nTo address these issues, we need to correct the function's structure by moving the misplaced closing brace to the end of the function. Additionally, we must implement the `stars` calculation by assigning a value to `breakdown.stars` based on `factors.stars` before it is added to the total score. This ensures the entire function executes as intended and that the scoring algorithm accurately reflects the quality of a post based on its embedded repository.\n\n### Impact\nThe correction of the syntax error and the implementation of the `stars` factor calculation will significantly improve the accuracy and reliability of the post scoring algorithm. This, in turn, will enhance the overall user experience by providing a more truthful representation of post quality, which can influence user engagement and the discovery of valuable content.", "branch_name": "bot/fix-algo-bugs-1774789313", "edits": [{"file": "apps/web/src/lib/algo.ts", "search": "score += breakdown.followerBias;\n}\n  // 9. Time decay\n", "replace": "score += breakdown.followerBias;\n  // 9. Time decay\n"}, {"file": "apps/web/src/lib/algo.ts", "search": "score += breakdown.stars;\n  // 3. Forks\n", "replace": "breakdown.stars = Math.min(factors.stars * 0.1, 50);\nscore += breakdown.stars;\n  // 3. Forks\n"}, {"file": "apps/web/src/lib/algo.ts", "search": "return {\n    score: finalScore,\n    breakdown\n  };", "replace": "return {\n    score: finalScore,\n    breakdown\n  };\n}"}]}
-
-**Reviewer**: APPROVE: The Executor has successfully addressed two critical bugs in the `calculatePostScoreDetailed` function: the misplaced closing brace that caused the time decay and final return statement to be outside the function, and the missing calculation for `breakdown.stars`. The proposed edits are precise, functional, and directly align with the Scanner's recommendations and Joseph's feedback on `git-pulse#92`. This will ensure the post scoring algorithm functions correctly and accurately.
-
----
-
-## Cycle 1774798547
+1774798547
 **Scanner**: **Step 1: Codebase Understanding**
 
 This repository, `git-pulse`, is a web application designed to provide a platform for developers, likely integrating with GitHub data to display profiles, feeds, and enable social interactions such as reactions on posts.
@@ -7543,5 +7465,85 @@ Implementing path aliases significantly improves the developer experience by all
 **Executor**: {"title": "[REFACTOR] Enhance TypeScript Configuration for Path Aliases", "body": "### Problem / Gap\nThe root `tsconfig.json` file lacks a `paths` configuration within its `compilerOptions`, leading to verbose relative imports.\n\n### Solution & Insight\nUpdate the root `tsconfig.json` file to include `baseUrl` and `paths` within its `compilerOptions`, enabling absolute module imports using aliases.\n\n### Impact\nImplementing path aliases improves developer experience by allowing cleaner, more readable, and stable import statements.", "branch_name": "bot/upgrade-1774810146", "edits": [{"file": "tsconfig.json", "search": "  \"compilerOptions\": {\n    \"target\": \"ES2020\",\n    \"lib\": [\"dom\", \"dom.iterable\", \"esnext\"],\n    \"allowJs\": true,\n    \"skipLibCheck\": true,\n    \"strict\": true,\n    \"noEmit\": true,\n    \"esModuleInterop\": true,\n    \"module\": \"esnext\",\n    \"moduleResolution\": \"bundler\",\n    \"resolveJsonModule\": true,\n    \"isolatedModules\": true,\n    \"jsx\": \"preserve\",\n    \"incremental\": true\n  },\n  \"exclude\": [\"node_modules\"]", "replace": "  \"compilerOptions\": {\n    \"target\": \"ES2020\",\n    \"lib\": [\"dom\", \"dom.iterable\", \"esnext\"],\n    \"allowJs\": true,\n    \"skipLibCheck\": true,\n    \"strict\": true,\n    \"noEmit\": true,\n    \"esModuleInterop\": true,\n    \"module\": \"esnext\",\n    \"moduleResolution\": \"bundler\",\n    \"resolveJsonModule\": true,\n    \"isolatedModules\": true,\n    \"jsx\": \"preserve\",\n    \"incremental\": true,\n    \"baseUrl\": \".\",\n    \"paths\": {\n      \"@/*\": [\"./apps/web/src/*\"]\n    }\n  },\n  \"exclude\": [\"node_modules\"]"}]}
 
 **Reviewer**: APPROVE: The proposed edit correctly adds `baseUrl` and `paths` to the `compilerOptions` in `tsconfig.json`. This aligns perfectly with the Scanner's recommendation to improve developer experience and consistency through path aliases. The search block is an exact match for the target content, ensuring the patch will apply correctly without destructive changes. This is a valuable and functional architectural improvement for the monorepo.
+
+---
+
+## Cycle 1774812856
+**Scanner**: ## SCANNER ANALYSIS: HOLYKEYZ/git-pulse
+
+### Step 1: Codebase Understanding
+
+*   **What does this repository do?**
+    The `git-pulse` repository hosts a web application designed to provide a social platform centered around GitHub activity. It allows users to view profiles, interact with content, and manage personal API keys for GitHub integration.
+
+*   **What do the target files do within the repo?**
+    *   `apps/web/src/app/api/auth/token/route.ts`: This file defines the API endpoints for managing a user's API key. It handles requests to check for an existing key, generate a new one, and revoke an active key, ensuring secure access to user-specific data.
+    *   `apps/web/src/components/ProfileReadme.tsx`: This React component is responsible for rendering a GitHub user's README content. It uses the `cheerio` library to parse and transform the raw HTML, applying various modifications such as enforcing dark mode, stripping GitHub-specific anchor links, proxying image and srcset URLs for security and path resolution, and ensuring external links open in new, secure tabs.
+    *   `packages/ui/package.json`: This file is the package manifest for the `ui` workspace package within the monorepo. It declares the package's name, version, entry points, and its direct dependencies (`clsx`, `tailwind-merge`) and development dependencies (`typescript`, `react`, `react-dom`), indicating it's a shared UI component library.
+
+*   **What patterns, frameworks, or conventions does the codebase use?**
+    The codebase utilizes the Next.js App Router for its web application structure, NextAuth.js for authentication, and Prisma as its Object-Relational Mapper (ORM) for database interactions. It employs React for building user interfaces and appears to use Tailwind CSS for styling, as suggested by the `tailwind-merge` dependency. The project is structured as a monorepo using `pnpm` workspaces, and it leverages `cheerio` for server-side HTML manipulation.
+
+### Step 2: Deep Analysis
+
+*   **Security**:
+    *   `apps/web/src/app/api/auth/token/route.ts`: Authentication checks (`session?.user?.login`) are consistently applied to all API key management routes (GET, POST, DELETE), which is good. API key generation uses `crypto.randomBytes(32).toString("hex")`, providing sufficient randomness. Prisma's ORM usage mitigates SQL injection risks.
+    *   `apps/web/src/components/ProfileReadme.tsx`: The use of `dangerouslySetInnerHTML` is mitigated by `cheerio` pre-processing, which sanitizes and transforms the HTML. Image proxying and adding `rel="noopener noreferrer"` to external links are good security practices. `encodeURIComponent` is correctly used for URL parameters in the proxy.
+
+*   **Logic**:
+    *   `apps/web/src/app/api/auth/token/route.ts`: The logic for API key operations (check, generate, revoke) is clear and correct. `force-dynamic` ensures fresh responses.
+    *   `apps/web/src/components/ProfileReadme.tsx`: The logic for transforming image `src` and `srcset` attributes to handle relative paths and proxy them is generally sound. It correctly distinguishes between paths relative to `github.com` and paths relative to the special `username/username` repository. However, a potential logic flaw exists: if the `username` prop is an empty string or null, the constructed `raw.githubusercontent.com` URLs for relative images will be malformed (e.g., `https://raw.githubusercontent.com//main/image.png`), leading to broken images. This is an unhandled edge case. The `srcset` parsing correctly handles `url` and `size` components, but the `username` issue applies here as well.
+
+*   **Performance**:
+    *   `apps/web/src/app/api/auth/token/route.ts`: Database operations are minimal and efficient.
+    *   `apps/web/src/components/ProfileReadme.tsx`: `cheerio.load()` and subsequent DOM traversals (`.each`) are generally efficient for typical README sizes. For extremely large READMEs, there could be a performance impact, but it's unlikely to be a bottleneck for this use case.
+
+*   **Architecture**:
+    *   `apps/web/src/app/api/auth/token/route.ts`: Adheres to Next.js API route conventions.
+    *   `apps/web/src/components/ProfileReadme.tsx`: The component is well-encapsulated, taking necessary data as props. The use of `cheerio` for server-side HTML manipulation is an appropriate architectural choice for pre-rendering and transforming external content. Direct inline styles for `backgroundColor` and `color` could be centralized in CSS classes for better consistency, but this is a minor point.
+
+*   **Features**:
+    *   The provided files implement their intended features comprehensively.
+
+*   **Testing**:
+    *   The current snippets do not include tests. The `ProfileReadme.tsx` component, with its complex HTML manipulation logic, would benefit from unit tests to cover various `content` and `username` inputs, especially edge cases for URL parsing and transformation.
+
+*   **DX (Developer Experience)**:
+    *   `packages/ui/package.json`: The `main` and `types` fields pointing directly to `./src/index.ts` is a common monorepo pattern. React version 19.0.0 is explicitly stated and should be considered correct per anti-hallucination rules.
+
+*   **Consistency**:
+    *   Naming and import patterns appear consistent within the provided files.
+
+*   **Dead Code**:
+    *   No obvious dead code was found.
+
+### Step 3: Pick ONE Improvement
+
+The most valuable improvement is to address the logic flaw in `apps/web/src/components/ProfileReadme.tsx` where an empty or null `username` prop can lead to malformed URLs for relative images within the README content. This is a logic bug that directly impacts the functionality and user experience by causing broken images.
+
+### Step 4: Write the Executor's Plan
+
+**WHAT**:
+The `ProfileReadme` component currently constructs URLs for relative images and `srcset` entries by directly embedding the `username` prop into `raw.githubusercontent.com` paths. If the `username` prop is an empty string or null, these constructed URLs become syntactically incorrect, leading to broken images in the rendered README. The improvement is to add explicit validation for the `username` prop before attempting to construct these specific URLs. If `username` is not a valid, non-empty string, the component should gracefully skip the transformation of relative paths into `raw.githubusercontent.com` URLs, instead allowing the original relative path to be passed to the image proxy. This prevents the creation of malformed URLs and ensures a more robust rendering of README content.
+
+**WHERE**:
+The changes will be made in the `apps/web/src/components/ProfileReadme.tsx` file. Specifically, modifications are needed within the `$('img').each` loop (around the section where `src` is set to `https://raw.githubusercontent.com/${username}/${username}/main/${src}`) and within the `$('source').each` loop (around the section where `url` is set to `https://raw.githubusercontent.com/${username}/${username}/main/${url}`).
+
+**WHY**:
+This matters because the current implementation can lead to a degraded user experience where images in a user's profile README appear broken if the `username` prop is not provided or is empty. This is a logic bug that results in invalid URLs being generated, preventing the browser from fetching the correct image resources. By adding a check for a valid `username`, the component becomes more resilient to unexpected input, ensuring that image URLs are correctly formed when `username` is available, and gracefully handled (by not forming a malformed URL) when it is not.
+
+**HOW**:
+1.  Locate the `ProfileReadme` functional component definition in `apps/web/src/components/ProfileReadme.tsx`.
+2.  Find the `$('img').each` loop. Inside this loop, locate the `else` block that handles relative image paths not starting with `/` (i.e., `src = `https://raw.githubusercontent.com/${username}/${username}/main/${src}`;`).
+3.  Before this line, add a conditional check: `if (username && username.length > 0)`. The existing line that constructs the `raw.githubusercontent.com` URL should only execute if this condition is true. If the condition is false, the `src` should remain unchanged from its original relative path, allowing the image proxy to receive it as is.
+4.  Similarly, find the `$('source').each` loop. Inside this loop, locate the `else` block that handles relative `srcset` URLs not starting with `/` (i.e., `url = `https://raw.githubusercontent.com/${username}/${username}/main/${url}`;`).
+5.  Before this line, add the same conditional check: `if (username && username.length > 0)`. The existing line that constructs the `raw.githubusercontent.com` URL should only execute if this condition is true. If the condition is false, the `url` part of the `srcset` entry should remain unchanged from its original relative path.
+
+**SCOPE**:
+This improvement involves modifying the conditional logic within two `cheerio.each` loops in the `apps/web/src/components/ProfileReadme.tsx` file. No other files are affected.
+
+**Executor**: {"title": "[LOGIC] Fix Malformed Image URLs in ProfileReadme", "body": "### Problem / Gap\nThe current implementation of the `ProfileReadme` component can lead to malformed URLs for relative images when the `username` prop is empty or null. This results in broken images being displayed in the README content.\n\n### Solution & Insight\nTo address this issue, we need to add a conditional check for the `username` prop before constructing the `raw.githubusercontent.com` URLs for relative images. If the `username` is not a valid, non-empty string, we should skip the transformation and allow the original relative path to be passed to the image proxy.\n\n### Impact\nThis fix ensures that image URLs are correctly formed when the `username` is available and prevents the creation of malformed URLs when it is not, resulting in a more robust rendering of README content.", "branch_name": "bot/fix-malformed-image-urls-1774812856", "edits": [{"file": "apps/web/src/components/ProfileReadme.tsx", "search": "            // 2. Proxy image URLs to handle CORS and relative path resolution\n            $('img').each((_, el) => {\n                let src = $(el).attr('src');\n                if (src && !src.startsWith('data:')) {\n                    // if the image is a relative path (e.g. \"cover2.jpeg\" or \"/repo/img.png\")\n                    if (!src.startsWith('http')) {\n                        if (src.startsWith('/')) {\n                            src = `https://github.com${src}`;\n                        } else {\n                            // it's a relative path in the special repository\n                            src = `https://raw.githubusercontent.com/${username}/${username}/main/${src}`;\n                        }\n                    }\n                    $(el).attr('src', `/api/image-proxy?url=${encodeURIComponent(src)}`);\n                }\n            });", "replace": "            // 2. Proxy image URLs to handle CORS and relative path resolution\n            $('img').each((_, el) => {\n                let src = $(el).attr('src');\n                if (src && !src.startsWith('data:')) {\n                    // if the image is a relative path (e.g. \"cover2.jpeg\" or \"/repo/img.png\")\n                    if (!src.startsWith('http')) {\n                        if (src.startsWith('/')) {\n                            src = `https://github.com${src}`;\n                        } else if (username && username.length > 0) {\n                            // it's a relative path in the special repository\n                            src = `https://raw.githubusercontent.com/${username}/${username}/main/${src}`;\n                        }\n                    }\n                    $(el).attr('src', `/api/image-proxy?url=${encodeURIComponent(src)}`);\n                }\n            });"}, {"file": "apps/web/src/components/ProfileReadme.tsx", "search": "            // 3. Proxy source srcsets\n            $('source').each((_, el) => {\n                const srcset = $(el).attr('srcset');\n                if (srcset) {\n                    const proxySet = srcset.split(',').map(part => {\n                        let [url, size] = part.trim().split(/\\s+/);\n                        if (url) {\n                            if (url.startsWith('data:')) {\n                                return part;\n                            } else if (!url.startsWith('http')) {\n                                if (url.startsWith('/')) {\n                                    url = `https://github.com${url}`;\n                                } else {\n                                    url = `https://raw.githubusercontent.com/${username}/${username}/main/${url}`;\n                                }\n                            }\n                            const proxiedUrl = `/api/image-proxy?url=${encodeURIComponent(url)}`;\n                            return size ? `${proxiedUrl} ${size}` : proxiedUrl;\n                        }\n                        return part;\n                    }).join(', ');\n                    $(el).attr('srcset', proxySet);\n                }\n            });", "replace": "            // 3. Proxy source srcsets\n            $('source').each((_, el) => {\n                const srcset = $(el).attr('srcset');\n                if (srcset) {\n                    const proxySet = srcset.split(',').map(part => {\n                        let [url, size] = part.trim().split(/\\s+/);\n                        if (url) {\n                            if (url.startsWith('data:')) {\n                                return part;\n                            } else if (!url.startsWith('http')) {\n                                if (url.startsWith('/')) {\n                                    url = `https://github.com${url}`;\n                                } else if (username && username.length > 0) {\n                                    url = `https://raw.githubusercontent.com/${username}/${username}/main/${url}`;\n                                }\n                            }\n                            const proxiedUrl = `/api/image-proxy?url=${encodeURIComponent(url)}`;\n                            return size ? `${proxiedUrl} ${size}` : proxiedUrl;\n                        }\n                        return part;\n                    }).join(', ');\n                    $(el).attr('srcset', proxySet);\n                }\n            });"}]}
+
+**Reviewer**: APPROVE: The Executor's proposed edits correctly implement the Scanner's recommendation to prevent malformed image URLs when the `username` prop is empty or null. The `if (username && username.length > 0)` condition is appropriately added to both the `img` and `source` processing loops, ensuring that `raw.githubusercontent.com` URLs are only constructed with a valid username. The search blocks are exact matches, and the change is functional, valuable, and non-destructive. This directly addresses a logic bug that could lead to broken images.
 
 ---
