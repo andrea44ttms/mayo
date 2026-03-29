@@ -7355,3 +7355,81 @@ This improvement involves a cohesive change across two files: `apps/web/tailwind
 **Reviewer**: Reviewer response unparseable
 
 ---
+
+## Cycle 1774789313
+**Scanner**: ## Codebase Understanding
+
+This repository, `HOLYKEYZ/git-pulse`, appears to be a web application designed to showcase and discover developer projects, likely integrating with GitHub data. It provides features like post scoring, user authentication, and real-time notifications.
+
+*   **`apps/web/src/lib/algo.ts`**: This file defines the core algorithm for calculating a "quality score" for user-submitted posts, primarily based on the characteristics of an embedded GitHub repository. It includes factors like language, stars, forks, commit activity, and author influence.
+*   **`apps/web/src/app/api/notifications/stream/route.ts`**: This file implements a Server-Sent Events (SSE) endpoint to stream real-time unread notification counts to authenticated users. It polls the database at regular intervals to fetch updates.
+*   **`apps/web/package.json`**: This is the standard manifest file for the `web` application, listing its dependencies (e.g., Next.js, React, Prisma, Next-Auth, Google Generative AI client) and development scripts.
+
+The codebase uses a Next.js framework with React for the frontend, Prisma for database ORM, and Next-Auth for authentication. It follows typical API route conventions for Next.js and uses TypeScript for type safety.
+
+## Deep Analysis
+
+### Security
+*   **`apps/web/src/app/api/notifications/stream/route.ts`**: User authentication is performed using `auth()` and `session?.user?.id` is checked. The database query uses `session.user.username`, which is derived from the authenticated session, reducing direct user input vulnerability. No obvious injection points or hardcoded secrets in the provided snippets.
+
+### Logic
+*   **`apps/web/src/lib/algo.ts`**:
+    *   **Critical Syntax/Logic Error**: The `calculatePostScoreDetailed` function has a structural error where the closing brace `}` for the function body is placed prematurely after `score += breakdown.followerBias;`. This means the subsequent lines for "Time decay" calculation, `finalScore` assignment, and the `return` statement are outside the function's scope, leading to a compilation error or unexpected runtime behavior.
+    *   **Missing Stars Calculation**: The `breakdown.stars` property is initialized to `0` and then `score += breakdown.stars;` is executed, but there is no logic to actually calculate a value for `breakdown.stars` based on `factors.stars`. This means the number of stars a repository has currently does not contribute to the post's score, despite being an explicit factor in the `ScoreFactors` interface and `PostScoreDetail` breakdown. This is a significant bug in the scoring algorithm.
+
+### Performance
+*   **`apps/web/src/app/api/notifications/stream/route.ts`**: The SSE stream polls the database every 10 seconds for *each* connected user to check for unread notifications. While functional for a small user base, this approach can become a performance bottleneck and resource-intensive as the number of concurrent users grows, leading to frequent database queries. A more scalable solution would involve a pub/sub mechanism or WebSockets to push updates only when a notification state actually changes.
+
+### Architecture
+*   **`apps/web/src/lib/algo.ts`**: The hardcoded `noveltyLanguages` and `commonLanguages` arrays could be externalized into a configuration file or constants module if they are expected to change frequently or be managed dynamically. This is a minor architectural point.
+
+### Features
+*   No obvious missing features in the provided snippets, but the `algo.ts` file's scoring logic could be expanded with more factors or configurable weights.
+
+### Testing
+*   No test files are provided for analysis, so it's not possible to comment on testing coverage or patterns.
+
+### DX (Developer Experience)
+*   No specific DX issues in the provided files.
+
+### Consistency
+*   **`apps/web/src/lib/algo.ts`**: The `stars` factor is defined but not implemented, which is inconsistent with other factors like `forks` and `commitVolume` that have explicit calculation logic.
+
+### Dead Code
+*   **`apps/web/package.json`**: The `ws` package is listed as a dependency. However, the `notifications/stream/route.ts` file uses Server-Sent Events (SSE), not WebSockets, and `ws` is not used in the provided `algo.ts` file. If `ws` is not used elsewhere in the `web` application, it represents an unused dependency.
+
+## Pick ONE Improvement
+
+The most critical issues are the **syntax error and the missing `stars` calculation in `apps/web/src/lib/algo.ts`**. These are fundamental logic bugs that prevent the post scoring algorithm from functioning correctly as intended. Joseph's feedback on `git-pulse#92` specifically highlighted fixing critical bugs in algorithm scoring, making this the highest priority.
+
+## Executor's Plan
+
+**WHAT** to change:
+The `calculatePostScoreDetailed` function in `apps/web/src/lib/algo.ts` needs two critical logic fixes:
+1.  The function's closing brace is misplaced, causing the time decay and final score calculation to be outside the function body. This needs to be corrected to ensure the entire function executes as a single unit.
+2.  The `stars` factor, which is part of the `ScoreFactors` interface, is currently not being used in the score calculation. Logic needs to be added to assign a value to `breakdown.stars` based on `factors.stars` before it is added to the total score.
+
+**WHERE** in the file(s):
+The changes will be made exclusively in the `apps/web/src/lib/algo.ts` file, specifically within the `calculatePostScoreDetailed` function.
+
+**WHY** this matters:
+1.  **Critical Bug Fix**: The misplaced closing brace is a severe syntax error that will prevent the `calculatePostScoreDetailed` function from compiling or executing correctly. This means the time decay and final score logic will not be applied, leading to incorrect or non-functional post scores.
+2.  **Algorithm Accuracy**: The absence of a `stars` calculation means that a significant indicator of repository quality is entirely ignored by the scoring algorithm. Implementing this factor will make the `git-pulse` post scoring more accurate and reflective of a project's actual popularity and quality, aligning with the intent of the `ScoreFactors` interface. This directly addresses a critical bug in the algorithm's logic.
+
+**HOW** to do it:
+1.  **Correct Function Structure**:
+    *   Locate the line `score += breakdown.followerBias;` within the `calculatePostScoreDetailed` function.
+    *   Immediately after this line, there is an incorrect closing brace `}`. This brace should be removed.
+    *   The correct closing brace for the `calculatePostScoreDetailed` function should be moved to the very end of the file, after the `return { score: finalScore, breakdown };` statement. This will ensure the time decay and final score calculations are properly enclosed within the function.
+2.  **Implement Stars Scoring**:
+    *   Locate the line `score += breakdown.stars;` within the `calculatePostScoreDetailed` function.
+    *   Immediately *before* this line, insert a new line of code to calculate `breakdown.stars`. The calculation should be `breakdown.stars = Math.min(factors.stars * 0.1, 50);`. This will assign a value to `breakdown.stars` based on the number of stars, capped at a maximum of 50 points, before it is added to the total score.
+
+**SCOPE**:
+This improvement involves a focused, multi-line change within a single file (`apps/web/src/lib/algo.ts`) to correct critical logic and syntax errors in the core post scoring algorithm.
+
+**Executor**: {"title": "[LOGIC] Fix Critical Bugs in Algorithm Scoring", "body": "### Problem / Gap\nThe `calculatePostScoreDetailed` function in `apps/web/src/lib/algo.ts` contains a critical syntax error and a missing logic implementation for the `stars` factor. The misplaced closing brace causes the time decay and final score calculations to be outside the function's scope, leading to compilation errors or unexpected runtime behavior. Furthermore, the absence of a `stars` calculation means that the number of stars a repository has does not contribute to the post's score, despite being an explicit factor in the `ScoreFactors` interface.\n\n### Solution & Insight\nTo address these issues, we need to correct the function's structure by moving the misplaced closing brace to the end of the function. Additionally, we must implement the `stars` calculation by assigning a value to `breakdown.stars` based on `factors.stars` before it is added to the total score. This ensures the entire function executes as intended and that the scoring algorithm accurately reflects the quality of a post based on its embedded repository.\n\n### Impact\nThe correction of the syntax error and the implementation of the `stars` factor calculation will significantly improve the accuracy and reliability of the post scoring algorithm. This, in turn, will enhance the overall user experience by providing a more truthful representation of post quality, which can influence user engagement and the discovery of valuable content.", "branch_name": "bot/fix-algo-bugs-1774789313", "edits": [{"file": "apps/web/src/lib/algo.ts", "search": "score += breakdown.followerBias;\n}\n  // 9. Time decay\n", "replace": "score += breakdown.followerBias;\n  // 9. Time decay\n"}, {"file": "apps/web/src/lib/algo.ts", "search": "score += breakdown.stars;\n  // 3. Forks\n", "replace": "breakdown.stars = Math.min(factors.stars * 0.1, 50);\nscore += breakdown.stars;\n  // 3. Forks\n"}, {"file": "apps/web/src/lib/algo.ts", "search": "return {\n    score: finalScore,\n    breakdown\n  };", "replace": "return {\n    score: finalScore,\n    breakdown\n  };\n}"}]}
+
+**Reviewer**: APPROVE: The Executor has successfully addressed two critical bugs in the `calculatePostScoreDetailed` function: the misplaced closing brace that caused the time decay and final return statement to be outside the function, and the missing calculation for `breakdown.stars`. The proposed edits are precise, functional, and directly align with the Scanner's recommendations and Joseph's feedback on `git-pulse#92`. This will ensure the post scoring algorithm functions correctly and accurately.
+
+---
