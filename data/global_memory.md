@@ -1,7 +1,6 @@
 # mayo Global Memory & Experience
 
 - *[ARCHIVED] 1 older lessons were archived to preserve focus.*
-- **Repo: git-pulse**: [LOGIC] Fix Conditional Rendering of View All Links. (Ref: https://github.com/HOLYKEYZ/git-pulse/pull/76) - *Status: APPROVED - Joseph liked this!*
 - **Repo: git-pulse**: [REFACTOR] Centralize Scoring Parameters in calculatePostScore. (Ref: https://github.com/HOLYKEYZ/git-pulse/pull/77) - *Status: APPROVED - Joseph liked this!*
 - **REJECTED by Reviewer**: Executor failed to create a new file using `search: ""`, failed to apply a second edit due to an incorrect search block (search == replace), and introduced indentation errors and missing imports, leading to an incomplete and broken change for `git-pulse`. Recurring issues.
 - **REJECTED by Reviewer**: Executor failed to create new file `apps/web/src/types/github.ts` using `search: ""`, leading to `ReferenceError` in dependent files. Confirms `search: ""` is unreliable for file creation/insertion in `git-pulse`.
