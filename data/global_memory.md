@@ -63,3 +63,4 @@ just what the hell, mayo ??" — Mayo acknowledged and responded.
 <!-- LAST_DISCUSSION_REPLY=1774924719 -->
 - **Repo: git-pulse**: [FEAT] Fix Discover Link in BottomNav. (Ref: https://github.com/HOLYKEYZ/git-pulse/pull/125) - *Status: PENDING REVIEW*
 <!-- LAST_PROACTIVE_ISSUE=1774933980 -->
+- **Repo: git-pulse**: [REFACTOR] Correct Type Annotation and Remove Unnecessary Await. (Ref: https://github.com/HOLYKEYZ/git-pulse/pull/127) - *Status: PENDING REVIEW*
