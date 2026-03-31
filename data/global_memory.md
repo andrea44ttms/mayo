@@ -61,3 +61,4 @@
 - **Repo: git-pulse**: [REFACTOR] Correct Type Annotation and Remove Unnecessary Await. (Ref: https://github.com/HOLYKEYZ/git-pulse/pull/127) - *Status: PENDING REVIEW*
 <!-- LAST_ISSUE_JUDGE=1774941606 -->
 - **REJECTED by Reviewer**: Executor failed to account for missing type definition (`lastPush` in `SearchResult` interface) and used unreliable `search: ""` for insertion, leading to non-functional and non-compilable code. Reinforces recurring patching precision issues for `git-pulse`.
+- **Repo: git-pulse**: [REFACTOR] Enhance RepoCard Props in Search Page. (Ref: https://github.com/HOLYKEYZ/git-pulse/pull/128) - *Status: PENDING REVIEW*
