@@ -64,3 +64,4 @@
 - **Joseph's Feedback on git-pulse#130**: "why this ?
 u are saying trash mayo" — Mayo acknowledged and responded.
 - **Joseph's Feedback on git-pulse#130**: "im waiting" — Mayo acknowledged and responded.
+- **Joseph's Feedback on git-pulse#130**: "since no updated code , closed" — Mayo acknowledged and responded.
