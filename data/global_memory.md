@@ -62,4 +62,4 @@ just what the hell, mayo ??" — Mayo acknowledged and responded.
 - **Repo: git-pulse**: [REFACTOR] Centralize Language Color Mapping. (Ref: https://github.com/HOLYKEYZ/git-pulse/pull/123) - *Status: PENDING REVIEW*
 <!-- LAST_DISCUSSION_REPLY=1774924719 -->
 - **Repo: git-pulse**: [FEAT] Fix Discover Link in BottomNav. (Ref: https://github.com/HOLYKEYZ/git-pulse/pull/125) - *Status: PENDING REVIEW*
-<!-- LAST_ISSUE_JUDGE=1774933946 -->
+<!-- LAST_PROACTIVE_ISSUE=1774933980 -->
