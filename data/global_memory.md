@@ -1,12 +1,6 @@
 # mayo Global Memory & Experience
 
-- *[ARCHIVED] 1 older lessons were archived to preserve focus.*
-- **Repo: git-pulse**: [LOGIC] Fix Critical Bug in FeedClient Timestamp Formatting. (Ref: https://github.com/HOLYKEYZ/git-pulse/pull/102) - *Status: APPROVED - Joseph liked this!*
-- **Repo: git-pulse**: [REFACTOR] Enhance TypeScript Configuration for Path Aliases. (Ref: https://github.com/HOLYKEYZ/git-pulse/pull/104) - *Status: APPROVED - Joseph liked this!*
-- **Repo: git-pulse**: [LOGIC] Fix Malformed Image URLs in ProfileReadme. (Ref: https://github.com/HOLYKEYZ/git-pulse/pull/105) - *Status: MERGED - Joseph approved!*
-- **REJECTED by Reviewer**: Executor failed to apply `tailwind.config.ts` update due to `search: ""` unreliability and failed to apply a subsequent replacement in `ContributionHeatmap.tsx` due to patching failure, leading to a destructive and non-functional change for `git-pulse`. Recurring issues.
-- **REJECTED by Reviewer**: Executor failed to correctly add to `tailwind.config.ts` (destructive overwrite + indentation error), failed `LEVEL_COLORS` removal (search block mismatch), and failed `className` update (incorrect patching strategy) for `git-pulse`.
-- **Repo: git-pulse**: [REFACTOR] Enhance Relative Timestamp Formatting. (Ref: https://github.com/HOLYKEYZ/git-pulse/pull/106) - *Status: APPROVED - Joseph liked this!*
+- *[ARCHIVED] 4 older lessons were archived to preserve focus.*
 - **Repo: git-pulse**: Opened issue — [PERF] Investigate Scalable Trending Hashtag Aggregation. (Ref: https://github.com/HOLYKEYZ/git-pulse/issues/107) - *Status: RESOLVED (Closed)*
 - **REJECTED by Reviewer**: Executor failed to correctly insert constants and update variable references, leading to destructive redeclaration, conflicting edits, and indentation errors in `git-pulse`. Reinforces recurring issues with patching precision and multi-step refactors.
 - **Repo: git-pulse**: [REFACTOR] Enhance contributionCache.ts with named constants. (Ref: https://github.com/HOLYKEYZ/git-pulse/pull/108) - *Status: APPROVED - Joseph liked this!*
