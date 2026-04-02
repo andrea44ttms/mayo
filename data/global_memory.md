@@ -63,3 +63,4 @@ u are saying trash mayo" — Mayo acknowledged and responded.
 - **Repo: git-pulse**: [REFACTOR] Centralize Bot Detection Logic. (Ref: https://github.com/HOLYKEYZ/git-pulse/pull/147) - *Status: PENDING REVIEW*
 - **Repo: git-pulse**: [REFACTOR] Improve TopNav Title Determination Logic. (Ref: https://github.com/HOLYKEYZ/git-pulse/pull/148) - *Status: PENDING REVIEW*
 - **Repo: git-pulse**: [REFACTOR] Correct params handling in reactions API route. (Ref: https://github.com/HOLYKEYZ/git-pulse/pull/149) - *Status: PENDING REVIEW*
+- **Repo: git-pulse**: [REFACTOR] Centralize Hardcoded Background Colors in RepoCard. (Ref: https://github.com/HOLYKEYZ/git-pulse/pull/151) - *Status: PENDING REVIEW*
