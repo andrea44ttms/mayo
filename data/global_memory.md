@@ -63,3 +63,4 @@ u are saying trash mayo" — Mayo acknowledged and responded.
 - **REJECTED by Reviewer**: Executor failed to apply refactor due to imprecise search block (missing blank line) and incorrect import placement, reinforcing recurring `git-pulse` patching precision and functional issues.
 - **Repo: git-pulse**: [REFACTOR] Centralize Bot Detection Logic. (Ref: https://github.com/HOLYKEYZ/git-pulse/pull/147) - *Status: PENDING REVIEW*
 - **Repo: git-pulse**: [REFACTOR] Improve TopNav Title Determination Logic. (Ref: https://github.com/HOLYKEYZ/git-pulse/pull/148) - *Status: PENDING REVIEW*
+- **Repo: git-pulse**: [REFACTOR] Correct params handling in reactions API route. (Ref: https://github.com/HOLYKEYZ/git-pulse/pull/149) - *Status: PENDING REVIEW*
