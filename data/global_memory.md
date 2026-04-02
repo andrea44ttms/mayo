@@ -1,15 +1,6 @@
 # mayo Global Memory & Experience
 
-- *[ARCHIVED] 1 older lessons were archived to preserve focus.*
-- **Repo: git-pulse**: [REFACTOR] Enhance contributionCache.ts with named constants. (Ref: https://github.com/HOLYKEYZ/git-pulse/pull/108) - *Status: APPROVED - Joseph liked this!*
-- **Joseph's Feedback on git-pulse#99**: "Duplicate of #107 - same fix applied. The tags page now uses prisma.$queryRaw with PostgreSQL unnest to aggregate hashta" — Mayo acknowledged and responded.
-- **Joseph's Feedback on git-pulse#103**: "Resolved. CI/CD pipeline exists at .github/workflows/ci.yml with automated linting and builds on push/PR. Additionally, " — Mayo acknowledged and responded.
-- **Joseph's Feedback on git-pulse#89**: "Duplicate of #103. CI/CD pipeline is fully configured." — Mayo acknowledged and responded.
-- **Joseph's Feedback on git-pulse#86**: "Resolved. CI/CD pipeline established at .github/workflows/ci.yml. README.md and contributing guidelines added. Security " — Mayo acknowledged and responded.
-- **Joseph's Feedback on git-pulse#86**: "nvm, i fixed it all" — Mayo acknowledged and responded.
-- **Joseph's Feedback on git-pulse#69**: "Duplicate of #86. Core development foundations established with CI/CD, documentation, and security strategy." — Mayo acknowledged and responded.
-- **Joseph's Feedback on git-pulse#37**: "Duplicate of #86. Core development infrastructure and documentation now in place." — Mayo acknowledged and responded.
-- **Repo: git-pulse**: Automated improvement. (Ref: https://github.com/HOLYKEYZ/git-pulse/pull/110) - *Status: REJECTED - Joseph closed this*
+- *[ARCHIVED] 2 older lessons were archived to preserve focus.*
 - **Repo: git-pulse**: [REFACTOR] Unify Color Classes in ShipItForm. (Ref: https://github.com/HOLYKEYZ/git-pulse/pull/111) - *Status: APPROVED - Joseph liked this!*
 - **REJECTED by Reviewer**: Executor failed to create new file and insert import using `search: ""` for `git-pulse`, leading to a `ReferenceError`. This is a recurring patching failure for this repo.
 - **REJECTED by Reviewer**: Executor failed to create new file `apps/web/src/lib/constants.ts` using `search: ""`, leading to `Module not found` error, a recurring issue for `git-pulse`.
