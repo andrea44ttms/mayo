@@ -372,10 +372,12 @@ def apply_surgical_edits(content, edits):
             
             # Skip search lines that are LLM truncation artifacts
             clean_search_indices = []
+            skip_patterns = ('...', '[...]', '# ...', '// ...', '/* ... */', '// rest of code', '/* rest of code */',
+                            '...', '[CODE]', '[REST]', '[...]')
             for idx in range(search_lines_count):
                 sl = str(s_map.get(int(idx), ""))
                 stripped_sl = sl.strip()
-                if stripped_sl not in ('# ...', '// ...', '...', '# ...', '/* ... */', '// rest of code'):
+                if stripped_sl not in skip_patterns:
                     clean_search_indices.append(int(idx))
             
             if len(clean_search_indices) >= 2:  # Need at least 2 real lines to match
