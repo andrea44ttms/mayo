@@ -81,3 +81,4 @@ now arent these colors already in lib/colors.ts" — Mayo acknowledged and respo
 - **Joseph's Feedback on git-pulse#166**: "git-pulse\apps\web\src\lib\colors.ts
 
 it absolutely exists" — Mayo acknowledged and responded.
+- **Repo: git-pulse**: [REFACTOR] Centralize LANGUAGE_COLORS and DEFAULT_LANGUAGE_COLOR. (Ref: https://github.com/HOLYKEYZ/git-pulse/pull/171) - *Status: PENDING REVIEW*
