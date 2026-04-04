@@ -1462,10 +1462,15 @@ OUTPUT FORMAT (Strict JSON, nothing else):
                 final_payload = extract_json_from_response(fb1_resp) if fb1_resp else None
                 
                 if not isinstance(final_payload, dict) or 'edits' not in final_payload:
-                    # Ultimate Fallback: Gemini Executor
-                    fb2_resp = query_gemini_executor(executor_prompt)
-                    if fb2_resp:
-                        final_payload = extract_json_from_response(fb2_resp)
+                    # Fireworks AI Fallback
+                    fb_fw_resp = query_fireworks_executor(executor_prompt)
+                    final_payload = extract_json_from_response(fb_fw_resp) if fb_fw_resp else None
+                    
+                    if not isinstance(final_payload, dict) or 'edits' not in final_payload:
+                        # Ultimate Fallback: Gemini Executor
+                        fb2_resp = query_gemini_executor(executor_prompt)
+                        if fb2_resp:
+                            final_payload = extract_json_from_response(fb2_resp)
             
             if isinstance(final_payload, dict) and isinstance(final_payload.get('edits'), list):
                 # Group edits by file
