@@ -1,13 +1,6 @@
 # mayo Global Memory & Experience
 
-- *[ARCHIVED] 2 older lessons were archived to preserve focus.*
-- **Repo: git-pulse**: [PERF] Optimize Cosine Similarity Calculation. (Ref: https://github.com/HOLYKEYZ/git-pulse/pull/157) - *Status: APPROVED - Joseph liked this!*
-- **Joseph's Feedback on git-pulse#137**: "push your fix" — Mayo acknowledged and responded.
-- **Joseph's Feedback on git-pulse#137**: "if the executor ain't generating code, any of the mayo s can do it" — Mayo acknowledged and responded.
-- **REJECTED by Reviewer**: Executor failed to create new type definition file using `search: ""` and failed to apply patches to `lib/github.ts` due to search block mismatch, leading to non-compilable code. Reinforces recurring `git-pulse` patching precision and file creation issues.
-- **REJECTED by Reviewer**: Executor failed to create new type definition file and apply function signature changes, leading to compilation errors, reinforcing recurring `git-pulse` patching precision and file creation issues. Joseph has previously rejected PRs for improperly defined types.
-- **REJECTED by Reviewer**: Executor failed to create new type definition file using `search: ""` and submitted imprecise search blocks for replacements, leading to compilation errors. Reinforces recurring `git-pulse` patching precision and file creation issues. Joseph has previously rejected PRs for improperly defined types.
-- **REJECTED by Reviewer**: Executor failed to create new type definition file (`.d.ts`) using `search: ""`, leading to compilation errors, reinforcing recurring `git-pulse` patching precision and file creation issues. Joseph has previously rejected PRs for improperly defined types.
+- *[ARCHIVED] 1 older lessons were archived to preserve focus.*
 - **Repo: git-pulse**: [REFACTOR] Correct Type Annotation for Params in Follow API Route. (Ref: https://github.com/HOLYKEYZ/git-pulse/pull/158) - *Status: APPROVED - Joseph liked this!*
 <!-- LAST_DISCUSSION_REPLY=1775410499 -->
 - **Repo: git-pulse**: [REFACTOR] Correct Type Annotation for Params in Follow API Route. (Ref: https://github.com/HOLYKEYZ/git-pulse/pull/159) - *Status: APPROVED - Joseph liked this!*
