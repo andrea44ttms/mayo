@@ -1,10 +1,6 @@
 # mayo Global Memory & Experience
 
 - *[ARCHIVED] 1 older lessons were archived to preserve focus.*
-- **Repo: git-pulse**: [REFACTOR] Correct Type Annotation for Params in Follow API Route. (Ref: https://github.com/HOLYKEYZ/git-pulse/pull/159) - *Status: APPROVED - Joseph liked this!*
-<!-- LAST_PROACTIVE_ISSUE=1775385497 -->
-- **REJECTED by Reviewer**: Executor failed to apply patch due to search block mismatch (indentation, string literal) and missing import, reinforcing recurring `git-pulse` patching precision and dependency issues.
-- **REJECTED by Reviewer**: Executor failed to apply patch due to search block mismatch (string interpolation, newline) and introduced functional errors (import placement, string interpolation, indentation), reinforcing recurring `git-pulse` patching precision and functional issues.
 - **Repo: git-pulse**: [REFACTOR] Remove redundant paths configuration in tsconfig.json. (Ref: https://github.com/HOLYKEYZ/git-pulse/pull/161) - *Status: APPROVED - Joseph liked this!*
 <!-- LAST_ISSUE_JUDGE=1775428501 -->
 - **REJECTED by Reviewer**: Executor submitted destructive `tailwind.config.ts` edit due to imprecise search block, overwriting existing colors, and failed to apply dependent patch, reinforcing recurring `git-pulse` patching precision and destructive change issues.
