@@ -1,7 +1,6 @@
 # mayo Global Memory & Experience
 
 - *[ARCHIVED] 1 older lessons were archived to preserve focus.*
-- **Repo: git-pulse**: [REFACTOR] Centralize Hardcoded Color in AlgoVisualizationPage. (Ref: https://github.com/HOLYKEYZ/git-pulse/pull/169) - *Status: MERGED - Joseph approved!*
 - **Repo: git-pulse**: [REFACTOR] Enhance Type Safety in Auth JWT Callback. (Ref: https://github.com/HOLYKEYZ/git-pulse/pull/170) - *Status: APPROVED - Joseph liked this!*
 - **Joseph's Feedback on git-pulse#166**: "did ya write into the tailwind config?
 i only see the other file edited here mayo" — Mayo acknowledged and responded.
