@@ -1,15 +1,6 @@
 # mayo Global Memory & Experience
 
 - *[ARCHIVED] 1 older lessons were archived to preserve focus.*
-- **Repo: git-pulse**: [REFACTOR] Centralize Hardcoded Colors in AchievementsWidget. (Ref: https://github.com/HOLYKEYZ/git-pulse/pull/173) - *Status: APPROVED - Joseph liked this!*
-- **REJECTED by Reviewer**: Executor failed to apply `tailwind.config.ts` patch, leading to non-functional styling, reinforcing recurring `git-pulse` patching precision issues and violating Joseph's color directive.
-- **REJECTED by Reviewer**: Executor failed to apply `tailwind.config.ts` patch, leading to undefined Tailwind class and broken styling, reinforcing recurring `git-pulse` patching precision issues with `tailwind.config.ts`.
-- **REJECTED by Reviewer**: Executor failed a multi-step refactor for SSRF prevention, specifically missing the creation of a helper function using `search: ""` and its subsequent import, a recurring issue for `git-pulse`.
-- **REJECTED by Reviewer**: Executor failed to apply multi-step SSRF prevention refactor due to imprecise search blocks for function insertion and imports, leading to compilation errors. Reinforces recurring `git-pulse` patching precision issues.
-- **REJECTED by Reviewer**: Executor failed to create/populate a new file (`apps/web/src/lib/routes.ts`) using `search: ""`, leading to compilation errors. This is a recurring patching precision and file creation issue for `git-pulse`.
-- **REJECTED by Reviewer**: Executor failed to create a new file (`apps/web/src/lib/routes.ts`) using `search: ""`, leading to a confirmed patching failure in the diff preview and subsequent compilation errors. This is a recurring `git-pulse` patching precision and file creation issue.
-- **REJECTED by Reviewer**: Executor failed to create new file and add import using `search: ""`, leading to compilation errors, reinforcing recurring `git-pulse` patching precision and file creation issues.
-- **REJECTED by Reviewer**: Executor failed to create a new file (`apps/web/src/lib/constants/colors.ts`) using `search: ""`, leading to compilation errors, reinforcing recurring `git-pulse` patching precision and file creation issues.
 - **Repo: git-pulse**: [PERF] Cache GitHub Repositories API Response. (Ref: https://github.com/HOLYKEYZ/git-pulse/pull/176) - *Status: APPROVED - Joseph liked this!*
 - **Repo: git-pulse**: [REFACTOR] Extract Server Action for Sign Out. (Ref: https://github.com/HOLYKEYZ/git-pulse/pull/177) - *Status: APPROVED - Joseph liked this!*
 - **REJECTED by Reviewer**: Executor attempted to centralize `LANGUAGE_COLORS` but failed to apply import and tried to re-add constant already present in `lib/colors.ts` from a previous PR (`git-pulse#171`). Patching precision for imports and awareness of existing centralized constants are critical.
@@ -115,9 +106,9 @@ i told u to focus on gitpulse" — Mayo acknowledged and responded.
 - **REJECTED by Reviewer**: Executor failed color centralization due to `search` block failures for `colors.ts` and `tailwind.config.ts` imports, leading to undefined Tailwind classes and broken styling. Reinforces recurring patching precision issues and Joseph's color directive violations.
 - **Repo: git-pulse**: [REFACTOR] Centralize Language Color Logic and Fix Runtime Error. (Ref: https://github.com/HOLYKEYZ/git-pulse/pull/205) - *Status: COMMENTED - Joseph had feedback*
 - **REJECTED by Reviewer**: Executor failed multi-step security fix due to `search: ""` for new file creation, imprecise search blocks for existing file modifications, and adding an import for a non-existent file, leading to compilation errors. Reinforces recurring `git-pulse` patching precision and file creation issues.
-- **Repo: git-pulse**: [SEC] Sanitize User-Generated Content in SearchBar. (Ref: https://github.com/HOLYKEYZ/git-pulse/pull/206) - *Status: PENDING REVIEW*
+- **Repo: git-pulse**: [SEC] Sanitize User-Generated Content in SearchBar. (Ref: https://github.com/HOLYKEYZ/git-pulse/pull/206) - *Status: REJECTED - Joseph closed this Comment: '@gemini-code-assist , good?'*
 - **REJECTED by Reviewer**: Executor failed multi-step color centralization due to `search: ""` failure for `colors.ts` and missing import in `tailwind.config.ts`, leading to compilation errors and broken styling. Reinforces recurring `git-pulse` patching precision and Joseph's color directive violations.
-- **Repo: git-pulse**: [REFACTOR] Centralize Hardcoded Colors in Settings Page. (Ref: https://github.com/HOLYKEYZ/git-pulse/pull/207) - *Status: PENDING REVIEW*
+- **Repo: git-pulse**: [REFACTOR] Centralize Hardcoded Colors in Settings Page. (Ref: https://github.com/HOLYKEYZ/git-pulse/pull/207) - *Status: REJECTED - Joseph closed this Comment: 'mayo dont be a fool, if u are defining colors in the config, use the colors inst'*
 - **REJECTED by Reviewer**: Executor proposed a no-op change for `middleware.ts` by providing identical `search` and `replace` blocks, reinforcing recurring `git-pulse` patching precision and value issues.
 - **Repo: git-pulse**: [REFACTOR] Update tsconfig.json and Correct middleware.ts Edit. (Ref: https://github.com/HOLYKEYZ/git-pulse/pull/208) - *Status: APPROVED - Joseph liked this!*
 - **Joseph's Feedback on git-pulse#192**: "@gemini-code-assist , good?" — Mayo acknowledged and responded.
