@@ -124,3 +124,4 @@ idc if the reviewer/scanne" — Mayo acknowledged and responded.
 - **Repo: git-pulse**: [LOGIC] Fix Runtime Error in StarsPage. (Ref: https://github.com/HOLYKEYZ/git-pulse/pull/212) - *Status: APPROVED - Joseph liked this!*
 - **REJECTED by Reviewer**: Executor failed to create new file using `search: ""` and submitted functionally incorrect code (React hooks in server utility), reinforcing recurring `git-pulse` patching precision and functional issues.
 - **REJECTED by Reviewer**: Executor failed to apply any changes due to `search: ""` for new file creation and imprecise search block for existing file, reinforcing recurring `git-pulse` patching precision and file creation issues.
+- **REJECTED by Reviewer**: Executor failed a multi-step refactor by not applying the API route change, leading to client-side functional breakage due to missing data. Reinforces recurring `git-pulse` patching precision and multi-step refactor issues.
