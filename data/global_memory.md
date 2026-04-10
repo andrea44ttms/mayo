@@ -131,3 +131,4 @@ idc if the reviewer/scanne" — Mayo acknowledged and responded.
 are u sure this is okay?
 
 mayo" — Mayo acknowledged and responded.
+- **Repo: git-pulse**: [REFACTOR] Centralize Hardcoded Color in Explore Tags Page. (Ref: https://github.com/HOLYKEYZ/git-pulse/pull/220) - *Status: PENDING REVIEW*
