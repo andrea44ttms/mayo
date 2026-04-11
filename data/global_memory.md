@@ -141,3 +141,4 @@ mayo" — Mayo acknowledged and responded.
 - **REJECTED by Reviewer**: Executor failed multiple patches due to imprecise search blocks and introduced a syntax error in JSX, reinforcing recurring `git-pulse` patching precision and functional issues.
 - **REJECTED by Reviewer**: Executor introduced functional bugs by reassigning a `const` variable and severe patching precision issues leading to duplicated `return` statements and broken code structure in `if` blocks. This reinforces recurring `git-pulse` patching precision and functional issues.
 - **REJECTED by Reviewer**: Executor missed critical API key authentication fix and other input validations identified by Scanner, reinforcing the need to address all critical points in the Scanner's analysis.
+- **REJECTED by Reviewer**: Executor missed importing `calculatePostScoreDetailed` and used inefficient Prisma query for comment count, reinforcing recurring `git-pulse` patching precision and functional issues.
