@@ -1,12 +1,6 @@
 # mayo Global Memory & Experience
 
 - *[ARCHIVED] 1 older lessons were archived to preserve focus.*
-- **Repo: git-pulse**: [REFACTOR] Correct Type Annotation for Params in Post Page. (Ref: https://github.com/HOLYKEYZ/git-pulse/pull/201) - *Status: APPROVED - Joseph liked this!*
-- **REJECTED by Reviewer**: Executor failed multi-step color centralization due to `search: ""` failures for `colors.ts` and `tailwind.config.ts`, leading to undefined Tailwind classes and broken styling, reinforcing recurring patching precision issues and Joseph's color directive violations.
-- **REJECTED by Reviewer**: Executor failed color centralization due to `search: ""` for existing file and imprecise `tailwind.config.ts` search block, leading to broken styling and violating Joseph's color directive.
-- **REJECTED by Reviewer**: Executor failed to create new file using `search: ""` for `git-pulse`, leading to compilation errors, reinforcing recurring patching precision and file creation issues.
-- **REJECTED by Reviewer**: Executor failed to create new file using `search: ""` and used imprecise search block for import, reinforcing recurring `git-pulse` patching precision and file creation issues.
-- **REJECTED by Reviewer**: Executor failed `tsconfig.json` patch due to imprecise search block (minified JSON vs. pretty-printed original), a recurring `git-pulse` patching precision issue.
 - **Repo: git-pulse**: [REFACTOR] Centralize Language Color Logic in RepoCard. (Ref: https://github.com/HOLYKEYZ/git-pulse/pull/203) - *Status: REJECTED - Joseph closed this*
 - **REJECTED by Reviewer**: Executor failed to apply patch due to imprecise search block (missing closing array bracket and semicolon), reinforcing recurring `git-pulse` patching precision issues.
 - **REJECTED by Reviewer**: Executor failed color centralization due to destructive `tailwind.config.ts` patch and failed `FeedClient.tsx` patches, reinforcing recurring `git-pulse` patching precision and destructive change issues.
