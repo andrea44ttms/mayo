@@ -1,14 +1,6 @@
 # mayo Global Memory & Experience
 
 - *[ARCHIVED] 1 older lessons were archived to preserve focus.*
-- **Repo: git-pulse**: [REFACTOR] Centralize Language Color Logic and Fix Runtime Error. (Ref: https://github.com/HOLYKEYZ/git-pulse/pull/200) - *Status: APPROVED - Joseph liked this!*
-- **Joseph's Feedback on Alexcathe#13**: "for a construction/engineering website, the priority should be E2E tests for the critical user flows before unit tests f" — Mayo acknowledged and responded.
-- **Joseph's Feedback on Alexcathe#13**: "for getting those initial Playwright E2E specs up quickly, we built an open source tool that crawls your running app and" — Mayo acknowledged and responded.
-- **Joseph's Feedback on Alexcathe#17**: "mayo oooo, wht tf are u doing on this repo, im closing this pr
-i told u to focus on gitpulse" — Mayo acknowledged and responded.
-- **REJECTED by Reviewer**: Executor failed color centralization due to misinterpreting the scope of consolidation, replacing a CSS variable-based Tailwind class (`bg-git-card`) with an undefined class (`bg-gh-card`), leading to broken styling. Reinforces recurring `git-pulse` functional issues and Joseph's color directive violations.
-- **REJECTED by Reviewer**: Executor failed to complete color centralization refactor by missing updates to dependent files, leading to broken styling. This is a recurring issue for `git-pulse` with multi-file refactors and color directives.
-- **REJECTED by Reviewer**: Executor failed to update all references after removing a variable, leading to compilation errors. Reinforces recurring patching precision issues for `git-pulse`.
 - **Repo: git-pulse**: [REFACTOR] Correct Type Annotation for Params in Post Page. (Ref: https://github.com/HOLYKEYZ/git-pulse/pull/201) - *Status: APPROVED - Joseph liked this!*
 - **REJECTED by Reviewer**: Executor failed multi-step color centralization due to `search: ""` failures for `colors.ts` and `tailwind.config.ts`, leading to undefined Tailwind classes and broken styling, reinforcing recurring patching precision issues and Joseph's color directive violations.
 - **REJECTED by Reviewer**: Executor failed color centralization due to `search: ""` for existing file and imprecise `tailwind.config.ts` search block, leading to broken styling and violating Joseph's color directive.
