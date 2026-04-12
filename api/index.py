@@ -539,15 +539,14 @@ IMPORTANT: If suggestions involve file changes, respond options:
 # === TRIPLE-AI FUNCTIONS ===
 
 def query_gemini_scanner(prompt, temperature=0.2):
-    """Scanner AI (Gemini A) — reads codebase, outputs text-only analysis. Uses Fireworks as primary."""
+    """Scanner AI (Gemini A) — reads codebase, outputs text-only analysis."""
     headers = {'Content-Type': 'application/json'}
     payload = {
         "contents": [{"parts": [{"text": prompt}]}],
         "generationConfig": {"temperature": temperature, "maxOutputTokens": 8000}
     }
     
-    # Try Fireworks first (most reliable)
-    if FIREWORKS_API_KEY:
+    def try_fireworks(key):
         try:
             fw_payload = {
                 "model": "accounts/fireworks/models/llama-v3p3-70b-instruct",
@@ -558,41 +557,41 @@ def query_gemini_scanner(prompt, temperature=0.2):
             r = requests.post(
                 "https://api.fireworks.ai/inference/v1/chat/completions",
                 json=fw_payload,
-                headers={**headers, 'Authorization': f'Bearer {FIREWORKS_API_KEY}'},
+                headers={**headers, 'Authorization': f'Bearer {key}'},
                 timeout=120
             )
             r.raise_for_status()
             return r.json()['choices'][0]['message']['content']
         except Exception as e:
             print(f"Scanner Fireworks Error: {e}")
+            return None
     
-    # Try Gemini keys
-    scanner_keys = [k for k in [GEMINI_API_KEY, GEMINI_FALLBACK_API_KEY] if k]
-    for i, key in enumerate(scanner_keys):
+    # Try GEMINI_FALLBACK_API_KEY as Fireworks first (since user puts Fireworks key there)
+    if GEMINI_FALLBACK_API_KEY:
+        result = try_fireworks(GEMINI_FALLBACK_API_KEY)
+        if result:
+            return result
+    
+    # Try primary Gemini key
+    if GEMINI_API_KEY:
         try:
-            r = requests.post(f"{GEMINI_API_URL}?key={key}", json=payload, headers=headers, timeout=120)
+            r = requests.post(f"{GEMINI_API_URL}?key={GEMINI_API_KEY}", json=payload, headers=headers, timeout=120)
             r.raise_for_status()
             return r.json()['candidates'][0]['content']['parts'][0]['text']
         except Exception as e:
-            err_body = str(getattr(getattr(e, 'response', None), 'text', ''))
-            print(f"Scanner Error (key {i+1}/{len(scanner_keys)}): {e}")
-            if i < len(scanner_keys) - 1:
-                wait = [10, 30][i]
-                print(f"DEBUG: Scanner failed. Waiting {wait}s before retry...")
-                time.sleep(wait)
-            else:
-                return None
+            print(f"Scanner Gemini Error: {e}")
+    
     return None
 
 def query_gemini_newcrons(prompt, temperature=0.2):
-    """Dedicated Gemini call for new cron phases (0.6, 0.7, I, D) — uses Fireworks as fallback."""
+    """Dedicated Gemini call for new cron phases (0.6, 0.7, I, D)."""
     headers = {'Content-Type': 'application/json'}
     payload = {
         "contents": [{"parts": [{"text": prompt}]}],
         "generationConfig": {"temperature": temperature, "maxOutputTokens": 8000}
     }
-    # Try Fireworks first (most reliable)
-    if FIREWORKS_API_KEY:
+    
+    def try_fireworks(key):
         try:
             fw_payload = {
                 "model": "accounts/fireworks/models/llama-v3p3-70b-instruct",
@@ -603,29 +602,36 @@ def query_gemini_newcrons(prompt, temperature=0.2):
             r = requests.post(
                 "https://api.fireworks.ai/inference/v1/chat/completions",
                 json=fw_payload,
-                headers={**headers, 'Authorization': f'Bearer {FIREWORKS_API_KEY}'},
+                headers={**headers, 'Authorization': f'Bearer {key}'},
                 timeout=120
             )
             r.raise_for_status()
             return r.json()['choices'][0]['message']['content']
         except Exception as e:
             print(f"NewCrons Fireworks Error: {e}")
+            return None
     
-    # Try Gemini keys
-    keys_to_try = [k for k in [GEMINI_NEWCRONS_API_KEY, GEMINI_API_KEY, GEMINI_FALLBACK_API_KEY] if k]
-    for i, key in enumerate(keys_to_try):
+    # Try GEMINI_FALLBACK_API_KEY as Fireworks first
+    if GEMINI_FALLBACK_API_KEY:
+        result = try_fireworks(GEMINI_FALLBACK_API_KEY)
+        if result:
+            return result
+    
+    # Try NEWCRONS key as Fireworks
+    if GEMINI_NEWCRONS_API_KEY:
+        result = try_fireworks(GEMINI_NEWCRONS_API_KEY)
+        if result:
+            return result
+    
+    # Try primary Gemini key
+    if GEMINI_API_KEY:
         try:
-            r = requests.post(f"{GEMINI_API_URL}?key={key}", json=payload, headers=headers, timeout=120)
+            r = requests.post(f"{GEMINI_API_URL}?key={GEMINI_API_KEY}", json=payload, headers=headers, timeout=120)
             r.raise_for_status()
             return r.json()['candidates'][0]['content']['parts'][0]['text']
         except Exception as e:
-            err_body = str(getattr(getattr(e, 'response', None), 'text', ''))
-            print(f"NewCrons Gemini Error (key {i+1}/{len(keys_to_try)}): {e}")
-            if i < len(keys_to_try) - 1:
-                print(f"DEBUG: NewCrons failed. Waiting 15s before retry...")
-                time.sleep(15)
-            else:
-                return None
+            print(f"NewCrons Gemini Error: {e}")
+    
     return None
 
 GEMINI_EXECUTOR_API_KEY = os.environ.get('GEMINI_EXECUTOR_API_KEY')
