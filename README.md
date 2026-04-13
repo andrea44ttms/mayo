@@ -25,11 +25,12 @@ flowchart TD
     F --> MEM
 ```
 
-| Role | Model | Purpose |
+| Role | Model(s) Used | Purpose |
 |---|---|---|
-| 🔭 **Scanner** | Gemini 2.5 Flash | Reads full codebase → text-only analysis (zero compaction risk) |
-| ⚡ **Executor** | Llama 3.3 70B (Groq) | Receives plan → produces surgical search/replace edits |
+| 🔭 **Scanner** | Fireworks AI (Llama 3.3 70B), Gemini 2.5 Flash | Reads full codebase → text-only analysis (zero compaction risk) |
+| ⚡ **Executor** | Fireworks AI (Llama 3.3 70B), Groq (Llama 3.1 8B), Gemini 2.5 Flash | Receives plan → produces surgical search/replace edits |
 | 🛡️ **Reviewer** | Gemini 2.5 Flash | Validates edits, corrects mistakes, audits PR review history |
+| 🆕 **NewCrons** | Fireworks AI (Llama 3.3 70B), Gemini 2.5 Flash | Handles timed phases (PR/issue judging, proactive issues, discussions) |
 
 ---
 
