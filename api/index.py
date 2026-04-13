@@ -576,10 +576,15 @@ def _try_gemini_api(prompt, key, temperature, model="gemini-2.5-flash"):
 
 # === TRIPLE-AI FUNCTIONS ===
 def query_gemini_scanner(prompt, temperature=0.2):
-    """Scanner AI (Gemini A) — reads codebase, outputs text-only analysis."""
-    # Try Fireworks keys first
-    for key in [FIREWORKS_API_KEY, GEMINI_FALLBACK_API_KEY]: # Check both possible Fireworks key locations
-        result = _try_fireworks_api(prompt, key, temperature)
+    """Scanner AI (Gemini A) — reads codebase, outputs text-only analysis. Prioritizes Fireworks (from GEMINI_FALLBACK_API_KEY)."""
+    # Try GEMINI_FALLBACK_API_KEY as Fireworks first
+    if GEMINI_FALLBACK_API_KEY:
+        result = _try_fireworks_api(prompt, GEMINI_FALLBACK_API_KEY, temperature)
+        if result: return result
+
+    # Then try dedicated Fireworks API_KEY (if user provided it separately)
+    if FIREWORKS_API_KEY:
+        result = _try_fireworks_api(prompt, FIREWORKS_API_KEY, temperature)
         if result: return result
 
     # Then try Gemini keys
@@ -590,10 +595,20 @@ def query_gemini_scanner(prompt, temperature=0.2):
     return None
 
 def query_gemini_newcrons(prompt, temperature=0.2):
-    """Dedicated Gemini call for new cron phases (0.6, 0.7, I, D)."""
-    # Try Fireworks keys first
-    for key in [FIREWORKS_API_KEY, GEMINI_FALLBACK_API_KEY, GEMINI_NEWCRONS_API_KEY]: # GEMINI_NEWCRONS_API_KEY might also hold a Fireworks key
-        result = _try_fireworks_api(prompt, key, temperature)
+    """Dedicated Gemini call for new cron phases (0.6, 0.7, I, D). Prioritizes Fireworks (from GEMINI_NEWCRONS_API_KEY or GEMINI_FALLBACK_API_KEY)."""
+    # Try GEMINI_NEWCRONS_API_KEY as Fireworks first
+    if GEMINI_NEWCRONS_API_KEY:
+        result = _try_fireworks_api(prompt, GEMINI_NEWCRONS_API_KEY, temperature)
+        if result: return result
+
+    # Then try GEMINI_FALLBACK_API_KEY as Fireworks
+    if GEMINI_FALLBACK_API_KEY:
+        result = _try_fireworks_api(prompt, GEMINI_FALLBACK_API_KEY, temperature)
+        if result: return result
+
+    # Then try dedicated Fireworks API_KEY (if user provided it separately)
+    if FIREWORKS_API_KEY:
+        result = _try_fireworks_api(prompt, FIREWORKS_API_KEY, temperature)
         if result: return result
 
     # Then try Gemini keys
