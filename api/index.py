@@ -711,7 +711,7 @@ def query_fireworks_executor(prompt, temperature=0.1):
         return None, None
     
     headers = {'Content-Type': 'application/json'}
-    model = "accounts/fireworks/models/llama-v3p3-70b-instruct"
+    model = "accounts/fireworks/models/llama-3.3-70b-instruct"
     payload = {
         "model": model,
         "messages": [{"role": "user", "content": prompt}],
