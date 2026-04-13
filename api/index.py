@@ -538,7 +538,7 @@ IMPORTANT: If suggestions involve file changes, respond options:
 
 # === API CALL HELPERS ===
 def _try_fireworks_api(prompt, key, temperature, model="accounts/fireworks/models/llama-v3p3-70b-instruct"):
-    if not key: return None
+    if not key: return None, None
     headers = {'Content-Type': 'application/json'}
     fw_payload = {
         "model": model,
@@ -554,13 +554,13 @@ def _try_fireworks_api(prompt, key, temperature, model="accounts/fireworks/model
             timeout=120
         )
         r.raise_for_status()
-        return r.json()['choices'][0]['message']['content']
+        return r.json()['choices'][0]['message']['content'], f"Fireworks AI ({model})"
     except Exception as e:
         print(f"Fireworks API Error: {e}")
-        return None
+        return None, None
 
 def _try_gemini_api(prompt, key, temperature, model="gemini-2.5-flash"):
-    if not key: return None
+    if not key: return None, None
     headers = {'Content-Type': 'application/json'}
     payload = {
         "contents": [{"parts": [{"text": prompt}]}],
@@ -569,10 +569,10 @@ def _try_gemini_api(prompt, key, temperature, model="gemini-2.5-flash"):
     try:
         r = requests.post(f"{GEMINI_API_URL}?key={key}", json=payload, headers=headers, timeout=120)
         r.raise_for_status()
-        return r.json()['candidates'][0]['content']['parts'][0]['text']
+        return r.json()['candidates'][0]['content']['parts'][0]['text'], f"Gemini 2.5 Flash ({key[:5]}...)"
     except Exception as e:
         print(f"Gemini API Error: {e}")
-        return None
+        return None, None
 
 # === TRIPLE-AI FUNCTIONS ===
 def query_gemini_scanner(prompt, temperature=0.2):
