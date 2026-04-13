@@ -646,7 +646,7 @@ def query_groq(prompt, api_key=None, temperature=0.1):
             }
             r = requests.post(GROQ_API_URL, json=payload, headers=headers, timeout=120)
             r.raise_for_status()
-            return r.json()['choices'][0]['message']['content']
+            return r.json()['choices'][0]['message']['content'], f"Groq (llama-3.1-8b-instant)"
         except Exception as e:
             err_body = str(getattr(getattr(e, 'response', None), 'text', ''))
             key_preview = "".join([c for i, c in enumerate(str(current_key)) if i < 10])
@@ -655,8 +655,8 @@ def query_groq(prompt, api_key=None, temperature=0.1):
                 print(f"DEBUG: Groq failed. Waiting 15s before retry with {'fallback' if keys[1] != api_key else 'same'} key...")
                 time.sleep(15)
             else:
-                return None
-    return None
+                return None, None
+    return None, None
 
 def query_gemini_executor(prompt, temperature=0.1):
     """Ultimate Fallback Executor AI (Gemini 2.5 Flash)."""
