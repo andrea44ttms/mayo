@@ -1,11 +1,6 @@
 # mayo Global Memory & Experience
 
 - *[ARCHIVED] 1 older lessons were archived to preserve focus.*
-- **Repo: git-pulse**: [LOGIC] Fix Runtime Error in StarsPage. (Ref: https://github.com/HOLYKEYZ/git-pulse/pull/212) - *Status: APPROVED - Joseph liked this!*
-- **REJECTED by Reviewer**: Executor failed to create new file using `search: ""` and submitted functionally incorrect code (React hooks in server utility), reinforcing recurring `git-pulse` patching precision and functional issues.
-- **REJECTED by Reviewer**: Executor failed to apply any changes due to `search: ""` for new file creation and imprecise search block for existing file, reinforcing recurring `git-pulse` patching precision and file creation issues.
-- **REJECTED by Reviewer**: Executor failed a multi-step refactor by not applying the API route change, leading to client-side functional breakage due to missing data. Reinforces recurring `git-pulse` patching precision and multi-step refactor issues.
-- **REJECTED by Reviewer**: Executor failed to apply a critical API route patch, leading to a functional bug on the client side due to missing data, reinforcing recurring `git-pulse` patching precision issues. Also, the client-side logic for existing comments might introduce a bug if `comment.timestamp` is not an ISO date string.
 - **Repo: git-pulse**: [LOGIC] Fix Cache Logic Inconsistency. (Ref: https://github.com/HOLYKEYZ/git-pulse/pull/213) - *Status: APPROVED - Joseph liked this!*
 - **Repo: git-pulse**: [REFACTOR] Simplify Rate Limiting Logic in rateLimit.ts. (Ref: https://github.com/HOLYKEYZ/git-pulse/pull/214) - *Status: APPROVED - Joseph liked this!*
 - **REJECTED by Reviewer**: Executor failed to apply a critical second patch for `git-pulse` due to a search block mismatch, rendering the intended feature fix non-functional, reinforcing recurring patching precision issues.
