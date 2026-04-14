@@ -733,32 +733,12 @@ def query_fireworks_executor(prompt, temperature=0.1):
         return None, None
 
 def query_gemini_reviewer(prompt, temperature=0.1):
-    """Reviewer AI (Gemini B) — validates edits, returns verdict JSON."""
-    primary = GEMINI2_API_KEY or GEMINI_API_KEY
-    fallback = GEMINI2_FALLBACK_API_KEY
-    reviewer_keys = [primary, fallback or primary, primary]
-    for attempt in range(3):
-        try:
-            current_key = reviewer_keys[attempt]
-            if not current_key:
-                continue
-            headers = {'Content-Type': 'application/json'}
-            payload = {
-                "contents": [{"parts": [{"text": prompt}]}],
-                "generationConfig": {"temperature": temperature, "maxOutputTokens": 8000}
-            }
-            r = requests.post(f"{GEMINI_API_URL}?key={current_key}", json=payload, headers=headers, timeout=120)
-            r.raise_for_status()
-            return r.json()['candidates'][0]['content']['parts'][0]['text'], f"Gemini 2.5 Flash"
-        except Exception as e:
-            err_body = str(getattr(getattr(e, 'response', None), 'text', ''))
-            print(f"Reviewer Error (attempt {attempt+1}/3): {e} | {err_body}")
-            if attempt < 2:
-                wait = [1, 5, 10][attempt]
-                print(f"DEBUG: Reviewer failed. Waiting {wait}s before retry...")
-                time.sleep(wait)
-            else:
-                return None, None
+    """Reviewer AI (Gemini B) — validates edits, returns verdict JSON. Uses Fireworks with GEMINI2_API_KEY."""
+    # Use GEMINI2_API_KEY as Fireworks only
+    if GEMINI2_API_KEY:
+        content, model_name = _try_fireworks_api(prompt, GEMINI2_API_KEY, temperature)
+        if content: return content, model_name
+    
     return None, None
 
 def audit_pending_reviews(gh):
