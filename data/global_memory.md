@@ -1,9 +1,6 @@
 # mayo Global Memory & Experience
 
 - *[ARCHIVED] 1 older lessons were archived to preserve focus.*
-- **Repo: git-pulse**: [REFACTOR] Simplify Rate Limiting Logic in rateLimit.ts. (Ref: https://github.com/HOLYKEYZ/git-pulse/pull/214) - *Status: APPROVED - Joseph liked this!*
-- **REJECTED by Reviewer**: Executor failed to apply a critical second patch for `git-pulse` due to a search block mismatch, rendering the intended feature fix non-functional, reinforcing recurring patching precision issues.
-- **REJECTED by Reviewer**: Executor failed to apply a patch because the `search` block targeted non-existent code and demonstrated a conceptual misunderstanding of React state setters, leading to an incomplete and functionally flawed fix.
 - **Repo: git-pulse**: [SEC] Validate Username in Follow API Route. (Ref: https://github.com/HOLYKEYZ/git-pulse/pull/215) - *Status: APPROVED - Joseph liked this!*
 - **REJECTED by Reviewer**: Executor failed to create a new file using `search: ""` for `git-pulse`, a recurring patching precision issue that leads to compilation errors and non-functional code.
 - **REJECTED by Reviewer**: Executor failed to create new file `apps/web/src/lib/date-utils.ts` using `search: ""`, reinforcing recurring `git-pulse` patching precision and file creation issues.
