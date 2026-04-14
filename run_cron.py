@@ -710,40 +710,42 @@ Write a helpful, concise reply. Be friendly and technical. If it's a question, a
                 print(f"DEBUG: Failed to load executor prompt: {e}")
                 break
             
-            # --- THE DUAL EXECUTOR & FALLBACK ARCHITECTURE (Meta Llama 3.3 + xAI Grok) ---
-            print("DEBUG: Executing Dual Groq Llama 3.3 + Fallbacks...")
-            executor1_resp, executor1_model = query_groq(executor_prompt, api_key=os.environ.get('GROK_API_KEY'))
-            executor2_resp, executor2_model = query_groq(executor_prompt, api_key=os.environ.get('GROK_2ND_EXECUTOR_API_KEY'))
+            # --- THE DUAL EXECUTOR & FALLBACK ARCHITECTURE (Fireworks + Groq) ---
+            print("DEBUG: Executing Fireworks Executor first...")
+            executor1_resp, executor1_model = query_fireworks_executor(executor_prompt)
             
             data1 = extract_json_from_response(executor1_resp) if executor1_resp else None
-            data2 = extract_json_from_response(executor2_resp) if executor2_resp else None
             
             improvement_data = None
-            used_model = executor1_model or executor2_model or "Groq (llama-3.1-8b-instant)"
+            used_model = executor1_model or "Fireworks AI (Llama 3.3 70B)"
             
-            # Combine successful edits from EXECUTOR 1 and EXECUTOR 2
-            if (data1 and 'edits' in data1) or (data2 and 'edits' in data2):
-                improvement_data = data1 if data1 else data2
-                if data1 and data2 and 'edits' in data1 and 'edits' in data2:
-                    print("DEBUG: Both Executors succeeded! Combining their surgical edits...")
-                    improvement_data['edits'].extend(data2.get('edits', []))
+            # If Fireworks succeeds, use it
+            if data1 and 'edits' in data1:
+                improvement_data = data1
             else:
-                print("DEBUG: Both Primary Executors failed or returned invalid JSON. Checking fallbacks...")
-                # Fallback 1: The Groq Fallback Key
-                fb1_resp, _ = query_groq(executor_prompt, api_key=os.environ.get('GROK_FALLBACK_API_KEY'))
-                improvement_data = extract_json_from_response(fb1_resp) if fb1_resp else None
+                print("DEBUG: Fireworks failed. Trying Dual Groq Llama 3.3...")
+                executor1_resp, executor1_model = query_groq(executor_prompt, api_key=os.environ.get('GROK_API_KEY'))
+                executor2_resp, executor2_model = query_groq(executor_prompt, api_key=os.environ.get('GROK_2ND_EXECUTOR_API_KEY'))
                 
-                if not improvement_data or 'edits' not in improvement_data:
-                    # Fallback 2: Fireworks AI
-                    print("DEBUG: Groq Fallback failed. Engaging Fireworks AI Executor...")
-                    fb2_resp, fb2_model = query_fireworks_executor(executor_prompt)
-                    used_model = fb2_model or used_model
-                    if fb2_resp:
-                        improvement_data = extract_json_from_response(fb2_resp)
+                data1 = extract_json_from_response(executor1_resp) if executor1_resp else None
+                data2 = extract_json_from_response(executor2_resp) if executor2_resp else None
+                
+                # Combine successful edits from EXECUTOR 1 and EXECUTOR 2
+                if (data1 and 'edits' in data1) or (data2 and 'edits' in data2):
+                    improvement_data = data1 if data1 else data2
+                    used_model = executor1_model or executor2_model or "Groq (llama-3.1-8b-instant)"
+                    if data1 and data2 and 'edits' in data1 and 'edits' in data2:
+                        print("DEBUG: Both Executors succeeded! Combining their surgical edits...")
+                        improvement_data['edits'].extend(data2.get('edits', []))
+                else:
+                    print("DEBUG: Both Groq Executors failed or returned invalid JSON. Checking fallbacks...")
+                    # Fallback 1: The Groq Fallback Key
+                    fb1_resp, _ = query_groq(executor_prompt, api_key=os.environ.get('GROK_FALLBACK_API_KEY'))
+                    improvement_data = extract_json_from_response(fb1_resp) if fb1_resp else None
                     
                     if not improvement_data or 'edits' not in improvement_data:
-                        # Fallback 3: The Ultimate Gemini Executor
-                        print("DEBUG: Fireworks failed. Engaging Ultimate Gemini Executor...")
+                        # Fallback 2: The Ultimate Gemini Executor
+                        print("DEBUG: Groq Fallback failed. Engaging Ultimate Gemini Executor...")
                         fb3_resp, fb3_model = query_gemini_executor(executor_prompt)
                         used_model = fb3_model or used_model
                         if fb3_resp:
