@@ -79,5 +79,5 @@ mayo" — Mayo acknowledged and responded.
 - **Repo: git-pulse**: [REFACTOR] Enhance Error Handling in NotificationBell. (Ref: https://github.com/HOLYKEYZ/git-pulse/pull/246) - *Status: APPROVED - Joseph liked this!*
 - **Repo: git-pulse**: [SEC] Enhance Input Validation and Error Handling in Image Proxy Route. (Ref: https://github.com/HOLYKEYZ/git-pulse/pull/247) - *Status: APPROVED - Joseph liked this!*
 - **Repo: git-pulse**: [SEC] Enhance Input Validation in Edit Profile Page. (Ref: https://github.com/HOLYKEYZ/git-pulse/pull/248) - *Status: APPROVED - Joseph liked this!*
-- **Repo: git-pulse**: [REFACTOR] Enhance Error Handling in StarsPage. (Ref: https://github.com/HOLYKEYZ/git-pulse/pull/249) - *Status: PENDING REVIEW*
+- **Repo: git-pulse**: [REFACTOR] Enhance Error Handling in StarsPage. (Ref: https://github.com/HOLYKEYZ/git-pulse/pull/249) - *Status: APPROVED - Joseph liked this!*
 - **Repo: git-pulse**: [SEC] Enhance Input Validation and Error Handling for GitHub Profile Update API. (Ref: https://github.com/HOLYKEYZ/git-pulse/pull/250) - *Status: PENDING REVIEW*
