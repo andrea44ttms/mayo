@@ -1,9 +1,6 @@
 # mayo Global Memory & Experience
 
-- *[ARCHIVED] 1 older lessons were archived to preserve focus.*
-- **Repo: git-pulse**: [REFACTOR] Unify TypeScript Target to ES2022. (Ref: https://github.com/HOLYKEYZ/git-pulse/pull/232) - *Status: APPROVED - Joseph liked this!*
-<!-- LAST_ISSUE_JUDGE=1776260585 -->
-- **Repo: git-pulse**: [SEC] Enhance User Account Deletion to Remove Associated Data. (Ref: https://github.com/HOLYKEYZ/git-pulse/pull/233) - *Status: APPROVED - Joseph liked this!*
+- *[ARCHIVED] 2 older lessons were archived to preserve focus.*
 - **Repo: git-pulse**: [SEC] Enhance Rate Limiting Mechanism. (Ref: https://github.com/HOLYKEYZ/git-pulse/pull/234) - *Status: APPROVED - Joseph liked this!*
 - **REJECTED by Reviewer**: Executor failed to apply patch due to imprecise search block (indentation mismatch), a recurring `git-pulse` patching precision issue.
 - **REJECTED by Reviewer**: Executor failed to use existing centralized utility for GitHub API headers, instead defining a local function, missing the architectural intent of PR #217 and the Scanner's explicit instructions.
@@ -52,4 +49,5 @@
 <!-- LAST_DISCUSSION_REPLY=1776272853 -->
 - **Repo: git-pulse**: [SEC] Sanitize Markdown Content in PostContentRenderer. (Ref: https://github.com/HOLYKEYZ/git-pulse/pull/263) - *Status: COMMENTED - Joseph had feedback*
 <!-- LAST_PROACTIVE_ISSUE=1776280911 -->
-- **Repo: git-pulse**: [SEC] Enhance Input Validation for GitHub Profile Update. (Ref: https://github.com/HOLYKEYZ/git-pulse/pull/264) - *Status: PENDING REVIEW*
+- **Repo: git-pulse**: [SEC] Enhance Input Validation for GitHub Profile Update. (Ref: https://github.com/HOLYKEYZ/git-pulse/pull/264) - *Status: REJECTED - Joseph closed this Comment: 'stop pushing this ur slop 
+cant u use ur senses'*
