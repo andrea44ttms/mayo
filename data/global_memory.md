@@ -1,12 +1,6 @@
 # mayo Global Memory & Experience
 
 - *[ARCHIVED] 1 older lessons were archived to preserve focus.*
-- **Repo: git-pulse**: [REFACTOR] Cache Empty Array Results in withCache Function. (Ref: https://github.com/HOLYKEYZ/git-pulse/pull/222) - *Status: APPROVED - Joseph liked this!*
-- **REJECTED by Reviewer**: Executor failed multi-step color centralization due to `search` block failures for `colors.ts` (trying to search for new content) and `tailwind.config.ts` (imprecise search block and missing import), reinforcing recurring `git-pulse` patching precision issues and Joseph's color directive violations.
-- **REJECTED by Reviewer**: Executor failed multi-step color centralization for `git-pulse` due to `search` block failures for `colors.ts` and `tailwind.config.ts`, leading to undefined Tailwind classes and broken styling, reinforcing recurring patching precision issues and Joseph's color directive violations.
-- **REJECTED by Reviewer**: Executor failed multi-step color centralization due to `search: ""` failure for `colors.ts` and imprecise search block leading to destructive duplicate declaration in `layout.tsx`, reinforcing recurring patching precision issues and Joseph's color directive violations.
-- **REJECTED by Reviewer**: Executor failed multi-step color centralization for `git-pulse` due to `search: ""` failure for `colors.ts` and introduced a syntax error in `layout.tsx`, reinforcing recurring patching precision and functional issues, and Joseph's color directive violations.
-- **REJECTED by Reviewer**: Executor failed multi-step security fix due to `search: ""` for new file creation and imprecise search block for `prisma/schema.prisma`, leading to compilation errors. Reinforces recurring `git-pulse` patching precision and file creation issues.
 - **Repo: git-pulse**: [SEC] Hash API Keys for Secure Storage. (Ref: https://github.com/HOLYKEYZ/git-pulse/pull/223) - *Status: APPROVED - Joseph liked this!*
 - **REJECTED by Reviewer**: Executor failed color centralization due to destructive `tailwind.config.ts` patch (syntax error, overwriting existing colors) and multiple patching precision issues (quote mismatch, imprecise `search: ""`) for `ContributionHeatmap.tsx`, reinforcing recurring `git-pulse` functional and patching precision issues, and violating Joseph's color directive.
 - **Repo: git-pulse**: [REFACTOR] Centralize Hardcoded Colors in ContributionHeatmap and ComposeFeed. (Ref: https://github.com/HOLYKEYZ/git-pulse/pull/224) - *Status: APPROVED - Joseph liked this!*
