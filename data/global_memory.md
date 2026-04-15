@@ -52,3 +52,4 @@
 <!-- LAST_DISCUSSION_REPLY=1776272853 -->
 - **Repo: git-pulse**: [SEC] Sanitize Markdown Content in PostContentRenderer. (Ref: https://github.com/HOLYKEYZ/git-pulse/pull/263) - *Status: COMMENTED - Joseph had feedback*
 <!-- LAST_PROACTIVE_ISSUE=1776280911 -->
+- **Repo: git-pulse**: [SEC] Enhance Input Validation for GitHub Profile Update. (Ref: https://github.com/HOLYKEYZ/git-pulse/pull/264) - *Status: PENDING REVIEW*
