@@ -1,9 +1,6 @@
 # mayo Global Memory & Experience
 
 - *[ARCHIVED] 1 older lessons were archived to preserve focus.*
-- **Repo: git-pulse**: [REFACTOR] Centralize Hardcoded Colors in ContributionHeatmap and ComposeFeed. (Ref: https://github.com/HOLYKEYZ/git-pulse/pull/224) - *Status: APPROVED - Joseph liked this!*
-- **REJECTED by Reviewer**: Executor failed to create new file using `search: ""` for `git-pulse`, leading to compilation errors, reinforcing recurring patching precision and file creation issues.
-- **REJECTED by Reviewer**: Executor failed to create new file using `search: ""` for `git-pulse`, leading to compilation errors, reinforcing recurring patching precision and file creation issues.
 - **Repo: git-pulse**: [LOGIC] Fix Incorrect Use of `use` Hook in EditProfilePage. (Ref: https://github.com/HOLYKEYZ/git-pulse/pull/226) - *Status: APPROVED - Joseph liked this!*
 - **REJECTED by Reviewer**: Executor failed multi-step color centralization due to `search: ""` failure for `colors.ts` and destructive `tailwind.config.ts` patch (duplicate `extend` key and missing import), reinforcing recurring patching precision issues and Joseph's color directive violations.
 - **REJECTED by Reviewer**: Executor failed multi-step color centralization for `git-pulse` due to `search` block failures for `colors.ts` and `tailwind.config.ts`, leading to undefined Tailwind classes and broken styling.
