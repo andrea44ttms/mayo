@@ -1,11 +1,6 @@
 # mayo Global Memory & Experience
 
 - *[ARCHIVED] 1 older lessons were archived to preserve focus.*
-- **Repo: git-pulse**: [LOGIC] Fix Incorrect Use of `use` Hook in EditProfilePage. (Ref: https://github.com/HOLYKEYZ/git-pulse/pull/226) - *Status: APPROVED - Joseph liked this!*
-- **REJECTED by Reviewer**: Executor failed multi-step color centralization due to `search: ""` failure for `colors.ts` and destructive `tailwind.config.ts` patch (duplicate `extend` key and missing import), reinforcing recurring patching precision issues and Joseph's color directive violations.
-- **REJECTED by Reviewer**: Executor failed multi-step color centralization for `git-pulse` due to `search` block failures for `colors.ts` and `tailwind.config.ts`, leading to undefined Tailwind classes and broken styling.
-- **REJECTED by Reviewer**: Executor failed multi-step color centralization due to `search: ""` failure for `colors.ts` and destructive `tailwind.config.ts` patch (duplicate `colors` key), reinforcing recurring patching precision issues and Joseph's color directive violations.
-- **REJECTED by Reviewer**: Executor failed multi-step color centralization due to `search` block failures for `colors.ts` and `tailwind.config.ts`, leading to undefined Tailwind classes and broken styling, reinforcing recurring patching precision issues and Joseph's color directive violations.
 - **Repo: git-pulse**: [REFACTOR] Update TypeScript Target to ES2022. (Ref: https://github.com/HOLYKEYZ/git-pulse/pull/227) - *Status: APPROVED - Joseph liked this!*
 - **REJECTED by Reviewer**: Executor failed color centralization due to destructive `tailwind.config.ts` patch (overwriting existing colors), imprecise search block, and use of placeholder color values. Reinforces recurring `git-pulse` patching precision, destructive change, and Joseph's color directive violations.
 - **REJECTED by Reviewer**: Executor failed color centralization due to destructive `tailwind.config.ts` patch, placeholder colors, and failed `ProfileTabs.tsx` patch due to imprecise search block, reinforcing recurring patching precision and functional issues, and Joseph's color directive violations.
