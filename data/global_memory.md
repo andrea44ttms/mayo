@@ -56,3 +56,4 @@
 - **Repo: git-pulse**: [SEC] Prevent SQL Injection in Notification API Routes. (Ref: https://github.com/HOLYKEYZ/git-pulse/pull/258) - *Status: APPROVED - Joseph liked this!*
 - **Repo: git-pulse**: [SEC] Enhance Input Validation and Error Handling in API Endpoints. (Ref: https://github.com/HOLYKEYZ/git-pulse/pull/259) - *Status: APPROVED - Joseph liked this!*
 - **Repo: git-pulse**: [SEC] Prevent SQL Injection in Prisma Queries. (Ref: https://github.com/HOLYKEYZ/git-pulse/pull/260) - *Status: MERGED - Joseph approved!*
+- **Repo: git-pulse**: [SEC] Enhance Input Validation and Error Handling in ReactionPicker. (Ref: https://github.com/HOLYKEYZ/git-pulse/pull/261) - *Status: PENDING REVIEW*
