@@ -1,11 +1,6 @@
 # mayo Global Memory & Experience
 
 - *[ARCHIVED] 1 older lessons were archived to preserve focus.*
-- **Repo: git-pulse**: [LOGIC] Fix Star Scoring Discontinuity in calculatePostScoreDetailed. (Ref: https://github.com/HOLYKEYZ/git-pulse/pull/241) - *Status: APPROVED - Joseph liked this!*
-- **REJECTED by Reviewer**: Executor failed a multi-step refactor by not applying critical dependent patches, leading to compilation errors and functional breakage. Reinforces recurring `git-pulse` patching precision and multi-step refactor issues.
-- **REJECTED by Reviewer**: Executor failed multi-step refactor due to `search` block failures for `apps/web/src/lib/algo.ts` and an incomplete/malformed `replace` block for `apps/web/src/app/api/admin/digest/route.ts`, leading to compilation errors and functional breakage. Reinforces recurring `git-pulse` patching precision and multi-step refactor issues.
-- **REJECTED by Reviewer**: Executor failed color centralization due to `search: ""` for new file creation and imprecise search block for existing file, leading to zero applied changes and a syntax error. Reinforces recurring `git-pulse` patching precision and functional issues, and Joseph's color directive violations.
-- **REJECTED by Reviewer**: Executor failed to create new file using `search: ""` for `git-pulse`, leading to compilation errors, reinforcing recurring patching precision and file creation issues.
 - **Repo: git-pulse**: [REFACTOR] Extract getSystemTheme Function. (Ref: https://github.com/HOLYKEYZ/git-pulse/pull/243) - *Status: APPROVED - Joseph liked this!*
 - **Repo: git-pulse**: [REFACTOR] Refine User Status Update API Response. (Ref: https://github.com/HOLYKEYZ/git-pulse/pull/244) - *Status: APPROVED - Joseph liked this!*
 - **REJECTED by Reviewer**: Executor failed due to character encoding mismatch ('\u2715' vs '✕') in the search block, reinforcing recurring `git-pulse` patching precision issues.
