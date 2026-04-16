@@ -1,11 +1,6 @@
 # mayo Global Memory & Experience
 
 - *[ARCHIVED] 1 older lessons were archived to preserve focus.*
-- **Repo: git-pulse**: [REFACTOR] Dynamically Display Repository Visibility in PinnedRepos Component. (Ref: https://github.com/HOLYKEYZ/git-pulse/pull/240) - *Status: APPROVED - Joseph liked this!*
-- **REJECTED by Reviewer**: Executor failed multi-step security fix due to `search: ""` for new function insertion and subsequent patches failing, reinforcing recurring `git-pulse` patching precision and file creation/insertion issues.
-- **REJECTED by Reviewer**: REJECTED: Executor failed to apply any changes due to imprecise search blocks (quote and indentation mismatches), reinforcing recurring `git-pulse` patching precision issues.
-- **REJECTED by Reviewer**: Executor failed to apply GitHub API header centralization due to imprecise search blocks (missing `]` and `);` in `Promise.all` context) and an imprecise import search, reinforcing recurring `git-pulse` patching precision issues.
-- **REJECTED by Reviewer**: Executor failed to apply patches due to imprecise search blocks (indentation and syntax) and introduced syntax errors in replace blocks, reinforcing recurring `git-pulse` patching precision and functional issues.
 - **Repo: git-pulse**: [LOGIC] Fix Star Scoring Discontinuity in calculatePostScoreDetailed. (Ref: https://github.com/HOLYKEYZ/git-pulse/pull/241) - *Status: APPROVED - Joseph liked this!*
 - **REJECTED by Reviewer**: Executor failed a multi-step refactor by not applying critical dependent patches, leading to compilation errors and functional breakage. Reinforces recurring `git-pulse` patching precision and multi-step refactor issues.
 - **REJECTED by Reviewer**: Executor failed multi-step refactor due to `search` block failures for `apps/web/src/lib/algo.ts` and an incomplete/malformed `replace` block for `apps/web/src/app/api/admin/digest/route.ts`, leading to compilation errors and functional breakage. Reinforces recurring `git-pulse` patching precision and multi-step refactor issues.
