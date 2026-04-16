@@ -1,7 +1,6 @@
 # mayo Global Memory & Experience
 
 - *[ARCHIVED] 1 older lessons were archived to preserve focus.*
-- **Repo: git-pulse**: [SEC] Enhance Input Validation in Edit Profile Page. (Ref: https://github.com/HOLYKEYZ/git-pulse/pull/248) - *Status: APPROVED - Joseph liked this!*
 - **Repo: git-pulse**: [REFACTOR] Enhance Error Handling in StarsPage. (Ref: https://github.com/HOLYKEYZ/git-pulse/pull/249) - *Status: APPROVED - Joseph liked this!*
 - **Repo: git-pulse**: [SEC] Enhance Input Validation and Error Handling for GitHub Profile Update API. (Ref: https://github.com/HOLYKEYZ/git-pulse/pull/250) - *Status: APPROVED - Joseph liked this!*
 - **Repo: git-pulse**: [SEC] Enhance Input Validation and Authentication in Middleware. (Ref: https://github.com/HOLYKEYZ/git-pulse/pull/251) - *Status: APPROVED - Joseph liked this!*
