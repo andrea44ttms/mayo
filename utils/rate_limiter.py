@@ -46,7 +46,13 @@ class RateLimiter:
                 q.popleft()
             return max(0, self.max_requests - len(q))
 
+    def reset(self, key: str) -> None:
+        """Clear the request history for a given key (useful for testing)."""
+        with self._locks[key]:
+            self._queues[key].clear()
+
 
 # Singleton instances
-api_limiter = RateLimiter(max_requests=10, window_seconds=60)
+# Bumped api_limiter to 15 req/min to give a bit more headroom for my use case
+api_limiter = RateLimiter(max_requests=15, window_seconds=60)
 comment_limiter = RateLimiter(max_requests=5, window_seconds=60)
