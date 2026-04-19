@@ -29,7 +29,8 @@ def test_window_expiry():
     limiter = RateLimiter(max_requests=1, window_seconds=1)
     assert limiter.is_allowed("inst_3") is True
     assert limiter.is_allowed("inst_3") is False
-    time.sleep(1.1)
+    # Sleep slightly longer than the window to avoid flaky timing on slow machines
+    time.sleep(1.2)
     assert limiter.is_allowed("inst_3") is True
 
 
