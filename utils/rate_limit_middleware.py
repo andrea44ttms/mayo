@@ -7,7 +7,7 @@ from .rate_limiter import api_limiter, comment_limiter
 logger = logging.getLogger(__name__)
 
 
-def rate_limited(limiter_type: str = "api", timeout: float = 60.0):
+def rate_limited(limiter_type: str = "api", timeout: float = 30.0):
     """
     Decorator to apply rate limiting to a function.
     The first argument of the decorated function must be installation_id.
@@ -18,7 +18,7 @@ def rate_limited(limiter_type: str = "api", timeout: float = 60.0):
 
     Args:
         limiter_type: Either "api" or "comment" to select the appropriate limiter.
-        timeout: Max seconds to wait for a slot before raising. Default is 60s.
+        timeout: Max seconds to wait for a slot before raising. Default is 30s.
     """
     limiter = api_limiter if limiter_type == "api" else comment_limiter
 
