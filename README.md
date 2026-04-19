@@ -3,6 +3,8 @@
 
 Mayo is a **Self-Improving Autonomous Maintenance Engine** integrated directly into your GitHub ecosystem. It uses a **Triple-AI Pipeline** — three specialized AI models working in concert — to produce high-value, validated code improvements across all your repositories.
 
+> **Personal fork note:** I'm using this to experiment with the Triple-AI pipeline on my own projects. Main changes from upstream will be tracked in this README.
+
 ---
 
 ## 🧬 Triple-AI Pipeline
@@ -72,44 +74,4 @@ The Scanner performs a rigorous multi-layered analysis:
 > 
 > To use Mayo:
 > 1. **Fork this repo**
-> 2. **Search and replace** all personal references:
->    - `HOLYKEYZ` → your GitHub username
->    - `ayandajoseph390@gmail.com` → your email
->    - `joe-gemini-bot` → your bot name
->    - `mayo` → your bot repo name
->    - All API keys/env vars → your own keys
-> 3. **Set up your own GitHub App** and add secrets to your repo
-> 4. **Update the workflow file** (`.github/workflows/cron.yml`) with your secrets
-
-### Environment Variables
-
-> *a quick, self-deprecating note: yes, my API key setup is a bit chaotic. i'm broke and use multiple free tiers that don't always play nice together, so i've had to get creative with fallbacks. if you're not as financially challenged, you can simplify by using fewer, more robust keys and adjusting the `api/index.py` and `run_cron.py` files accordingly.*
-
-| Variable | Purpose |
-|---|---|
-| `GEMINI_API_KEY` | Primary Gemini key (for Scanner/Reviewer) |
-| `GEMINI_FALLBACK_API_KEY` | Secondary key (often a Fireworks AI key in my setup, used as fallback for Scanner/NewCrons) |
-| `GEMINI_NEWCRONS_API_KEY` | Dedicated key for NewCrons phases (can be Gemini or Fireworks) |
-| `FIREWORKS_API_KEY` | Primary Fireworks AI key (for Executor) |
-| `GROQ_API_KEY` | Primary Groq key (for Executor) |
-| `GROK_2ND_EXECUTOR_API_KEY` | Secondary Groq key (for Executor fallback) |
-| `GEMINI_EXECUTOR_API_KEY` | Dedicated Gemini key for Executor fallback |
-| `GEMINI3_FALLBACK_API_KEY` | Tertiary Gemini key for Executor fallback |
-| `APP_ID` / `PRIVATE_KEY` | GitHub App authentication |
-| `WEBHOOK_SECRET` | Vercel webhook secret |
-| `BOT_REPO_NAME` | Your bot's repository name (e.g., `HOLYKEYZ/mayo`) |
-| `CO_AUTHOR_NAME` / `CO_AUTHOR_EMAIL` | Your name/email for co-authored commits |
-| `CRON_SECRET` | Hourly cron trigger authorization |
-
-### Deployment
-1. Deploy as a **GitHub App** on **Vercel**.
-2. Point webhook to `https://your-app.vercel.app/webhook`.
-3. Install on your repositories.
-4. The hourly cron (`.github/workflows/cron.yml`) handles the rest.
-
----
-
-## ℹ️ Author
-Created by **Joseph (@HOLYKEYZ)**. Advanced agentic engineering for autonomous codebase maintenance.
-
-Happy coding! 🚀 (v3.0 — Triple-AI)
+> 2. **Search and rep
