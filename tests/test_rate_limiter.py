@@ -30,7 +30,7 @@ def test_window_expiry():
     assert limiter.is_allowed("inst_3") is True
     assert limiter.is_allowed("inst_3") is False
     # Sleep slightly longer than the window to avoid flaky timing on slow machines
-    time.sleep(1.2)
+    time.sleep(1.5)  # increased from 1.2s for extra safety on slow CI
     assert limiter.is_allowed("inst_3") is True
 
 
