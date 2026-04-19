@@ -22,5 +22,8 @@ cant u use ur senses'*
 <!-- LAST_PR_JUDGE=1776382967 -->
 - **Repo: git-pulse**: [SEC] Enhance Input Validation and Error Handling in API Routes. (Ref
 
----
-<!-- Personal note: Joseph seems to dislike generic SEC/validation PRs - focus on targeted, well-reasoned changes with clear context rather than broad sweeping improvements. -->
+<!-- PERSONAL NOTES (fork-only):
+  - Lesson learned: avoid cosmetic/redundant SEC PRs; focus on changes with clear, demonstrable impact
+  - Joseph prefers manual, production-grade implementations over auto-generated boilerplate
+  - Slow down on PR volume; quality > quantity
+-->
