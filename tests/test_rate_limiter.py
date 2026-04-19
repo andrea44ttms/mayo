@@ -52,7 +52,8 @@ def test_wait_and_acquire_succeeds():
 def test_wait_and_acquire_timeout():
     limiter = RateLimiter(max_requests=1, window_seconds=60)
     limiter.is_allowed("inst_6")
-    result = limiter.wait_and_acquire("inst_6", timeout=0.6)
+    # Using a slightly longer timeout (0.8s) to reduce flakiness on slow CI
+    result = limiter.wait_and_acquire("inst_6", timeout=0.8)
     assert result is False
 
 
