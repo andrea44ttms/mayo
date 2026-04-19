@@ -74,8 +74,8 @@ def get_github_client(installation_id):
 
 # Helper: Get Bot Login
 # NOTE: cache the bot login to avoid repeated API calls on every webhook event
+# Cache expires after 1 hour to handle token rotation gracefully
 BOT_LOGIN_CACHE = None
+BOT_LOGIN_CACHE_TTL = 3600  # seconds
+BOT_LOGIN_CACHE_TIME = 0
 def get_bot_login():
-    global BOT_LOGIN_CACHE
-    if BOT_LOGIN_CACHE:
-        return BOT_LOGIN_CACHE
