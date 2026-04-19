@@ -96,4 +96,4 @@ class TestVerifySignature:
 
         with patch("api.index.WEBHOOK_SECRET", "mysecret"):
             # A signature without the expected "sha256=" prefix should be rejected
-            assert verify_signature(payload, "notasig") is False
+            assert verify_signature(payload, "deadbeef") is False
