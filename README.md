@@ -4,6 +4,8 @@
 Mayo is a **Self-Improving Autonomous Maintenance Engine** integrated directly into your GitHub ecosystem. It uses a **Triple-AI Pipeline** — three specialized AI models working in concert — to produce high-value, validated code improvements across all your repositories.
 
 > **Personal fork note:** I'm using this to experiment with the Triple-AI pipeline on my own projects. Main changes from upstream will be tracked in this README.
+> 
+> **My setup:** Primarily testing with the Gemini 2.5 Flash models since I have the most API quota there. Fireworks AI is set as fallback only.
 
 ---
 
@@ -70,8 +72,4 @@ The Scanner performs a rigorous multi-layered analysis:
 
 > **⚠️ FORK BEFORE USING**
 > 
-> This repo contains hardcoded references to my personal accounts, API keys, GitHub App configuration, and other credentials scattered throughout the codebase. **Do not use this repo directly.**
-> 
-> To use Mayo:
-> 1. **Fork this repo**
-> 2. **Search and rep
+> This repo contains hardcoded references to my personal accounts, API keys, GitHub App configu
