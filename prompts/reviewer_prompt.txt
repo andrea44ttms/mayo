@@ -53,3 +53,4 @@ Notes:
 - `reasonableness_score` is 0-100: how confident you are that this change is correct and valuable. 85+ = highly confident, 30- = fundamentally flawed
 - When in doubt between CORRECT and REJECT, prefer REJECT to avoid silently introducing bad code
 - Personal note: I've found that a score threshold of 70 works better than 85 for smaller, style-focused repos where changes are inherently low-risk
+- Personal note: For my own learning repos, I also allow CORRECT verdicts on near-miss search strings where the intent is unambiguous — avoids unnecessary REJECT loops
