@@ -2,6 +2,7 @@
 from .rate_limiter import RateLimiter, api_limiter, comment_limiter
 
 # Custom rate limiter for search endpoints
-search_limiter = RateLimiter(max_calls=10, period=60)
+# Reduced to 5 calls/60s to avoid hitting upstream API limits on my account
+search_limiter = RateLimiter(max_calls=5, period=60)
 
 __all__ = ["RateLimiter", "api_limiter", "comment_limiter", "search_limiter"]
