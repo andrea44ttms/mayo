@@ -5,6 +5,7 @@ This file records the dialogue between the Scanner, Executor, and Reviewer for e
 <!-- Personal note: forked for learning purposes - tracking AI agent communication patterns -->
 <!-- Note to self: the Scanner sometimes hallucinates repo names - double-check cd commands in generated READMEs -->
 <!-- Confirmed pattern: Scanner hallucinated 'cd AI-safety' for IntellectSafe repo (see entry 1772671945) - this is a recurring issue -->
+<!-- TODO: flag entries where Scanner confidence on repo name < 100% - maybe add a verification step before Executor runs -->
 
 ---
 
@@ -38,6 +39,5 @@ The codebase appears to use Python (likely FastAPI with Uvicorn) for the backend
 
 *   **Security**: The documentation highlights strong security practices such as Fernet (AES-128) encryption for API keys and the use of environment variables for sensitive data. The `SECRET_KEY` is advised to be a random 32+ character string, which is good. CORS origins are correctly specified for production and local environments.
 *   **Logic**:
-    *   In `README.md`, the "Getting Started" section's installation instructions contain a logical error: `cd AI-safety` is used after cloning, but the repository name is `IntellectSafe`. This will cause a "directory not found" error.
-    *   Also in `README.md`, the `git clone <repo-url>` command uses a generic placeholder instead of the actual repository URL.
-    *   The "Advanced Defense (Fortress Mode)" section in `
+    *   In `README.md`, the "Getting Started" section's installation instructions contain a logical error: `cd AI-safety` is used after cloning, but the repository name is `IntellectSafe`. This will cause a "directory not found" error. <!-- confirmed hallucination - classic example of the repo-name mismatch bug -->
+    *   Also in `README.md`, the `git clone <repo-
