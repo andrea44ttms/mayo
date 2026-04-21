@@ -88,19 +88,17 @@ class TestRateLimitedDecorator:
             assert len(args[1]) > 0
 
     def test_allows_single_call_at_limit_boundary(self):
-        """The Nth call (exactly at max_calls) should still be allowed."""
-        mock_fn = MagicMock(return_value="ok")
-        issue = make_mock_issue(number=3, repo_full_name="org/boundary-repo")
+        """The Nth call (exactly at the limit) should still be allowed."""
+        mock_fn = MagicMock(return_value="boundary")
+        issue = make_mock_issue(number=99, repo_full_name="org/boundary-repo")
         gh = make_mock_gh()
 
+        # max_calls=3 means the 3rd call should succeed, 4th should be blocked
         decorated = rate_limited(max_calls=3, window=60)(mock_fn)
 
-        # First two calls
         decorated(issue, gh)
         decorated(issue, gh)
-        mock_fn.reset_mock()
+        result = decorated(issue, gh)  # exactly at the boundary
 
-        # Third call should still be allowed (exactly at the limit)
-        result = decorated(issue, gh)
-        mock_fn.assert_called_once_with(issue, gh)
-        assert result == "ok"
+        assert mock_fn.call_count == 3
+        assert result == "boundary"
