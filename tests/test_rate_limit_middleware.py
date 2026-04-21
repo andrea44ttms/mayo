@@ -93,7 +93,7 @@ class TestRateLimitedDecorator:
         issue = make_mock_issue(number=99, repo_full_name="org/boundary-repo")
         gh = make_mock_gh()
 
-        # max_calls=3 means the 3rd call should succeed, 4th should be blocked
+        # max_calls=3 means calls 1, 2, 3 are allowed; call 4 is blocked
         decorated = rate_limited(max_calls=3, window=60)(mock_fn)
 
         decorated(issue, gh)
